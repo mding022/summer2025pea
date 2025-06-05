@@ -31,14 +31,9 @@ export default function SearchDashboard() {
   const [previousResults, setPreviousResults] = useState<SearchResult[]>([])
   const [rules, setRules] = useState<Rule[]>([
     {
-      title: "PEA-wAI (with AI)",
-      content: "Describe Search Methodology",
-    },
-    {
-      title: "protest events",
-      content:
-        "Search for protest events. A protest event is a political action made in public by a group of people who make demands on authorities such as the state, political actors, regulatory agencies, and companies. A conflict occurs in a specific project when one or more protest events are related to it.",
-    },
+      title: "",
+      content: "",
+    }
   ])
   const [isLoading, setIsLoading] = useState(false)
   const [activeTab, setActiveTab] = useState("current")
