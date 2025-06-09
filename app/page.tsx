@@ -96,7 +96,7 @@ ${rulesXML}
       // Convert rules to XML format for the request
       const methodology = rulesToXML(rules)
       console.log(methodology)
-      const response = await fetch(`http://localhost:8000/search?${searchParams.toString()}`, {
+      const response = await fetch(`https://service.millerding.com/search?${searchParams.toString()}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -123,7 +123,7 @@ ${rulesXML}
     }
 
     try {
-      const response = await fetch("http://localhost:8000/results")
+      const response = await fetch("https://service.millerding.com/results")
 
       if (!response.ok) {
         throw new Error(`Error: ${response.status}`)
@@ -145,7 +145,7 @@ ${rulesXML}
 
     setIsMethodologyLoading(true)
     try {
-      const response = await fetch("http://localhost:8000/methodology")
+      const response = await fetch("https://service.millerding.com/methodology")
 
       if (!response.ok) {
         throw new Error(`Error: ${response.status}`)
@@ -167,7 +167,7 @@ ${rulesXML}
   const fetchUrls = async () => {
     setIsUrlsLoading(true)
     try {
-      const response = await fetch("http://localhost:8000/urls")
+      const response = await fetch("https://service.millerding.com/urls")
 
       if (!response.ok) {
         throw new Error(`Error: ${response.status}`)
@@ -188,7 +188,7 @@ ${rulesXML}
   const runExtract = async () => {
     setIsExtractLoading(true)
     try {
-      const response = await fetch("http://localhost:8000/extract")
+      const response = await fetch("https://service.millerding.com/extract")
 
       if (!response.ok) {
         throw new Error(`Error: ${response.status}`)
@@ -197,7 +197,7 @@ ${rulesXML}
       const result = await response.text()
 
       if (result && result.trim() !== "null" && result.trim() !== "") {
-        window.open("http://localhost:8000/map", "_blank")
+        window.open("https://service.millerding.com/map", "_blank")
       } else {
         setError("Extract operation failed or returned no result.")
       }
@@ -212,7 +212,7 @@ ${rulesXML}
   const clearResults = async () => {
     setIsClearLoading(true)
     try {
-      const response = await fetch("http://localhost:8000/clear")
+      const response = await fetch("https://service.millerding.com/clear")
 
       if (!response.ok) {
         throw new Error(`Error: ${response.status}`)
