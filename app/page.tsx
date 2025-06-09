@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Search, Clock, FileText, Loader2, Save, LinkIcon, Map, X, Home, Sparkles, Plus, Trash2 } from "lucide-react"
+import { Search, Clock, FileText, Loader2, Save, LinkIcon, Map, X, Plus, Trash2, XIcon } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -33,7 +33,7 @@ export default function SearchDashboard() {
     {
       title: "",
       content: "",
-    }
+    },
   ])
   const [isLoading, setIsLoading] = useState(false)
   const [activeTab, setActiveTab] = useState("current")
@@ -44,8 +44,8 @@ export default function SearchDashboard() {
   const [showUrlsModal, setShowUrlsModal] = useState(false)
   const [urlsList, setUrlsList] = useState<string[]>([])
   const initialMethodologyLoadedRef = useRef(false)
+  const [isClearLoading, setIsClearLoading] = useState(false)
 
-  // Convert rules array to XML format
   const rulesToXML = (rulesArray: Rule[]): string => {
     const rulesXML = rulesArray
       .map(
@@ -209,6 +209,33 @@ ${rulesXML}
     }
   }
 
+  const clearResults = async () => {
+    setIsClearLoading(true)
+    try {
+      const response = await fetch("http://localhost:8000/clear")
+
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      // Clear local state
+      setCurrentResults([])
+      setPreviousResults([])
+      setQuery("")
+
+      // Show success message briefly
+      setError("")
+      console.log(data.message) // You could also show this in a toast notification
+    } catch (err) {
+      console.error("Failed to clear results:", err)
+      setError("Failed to clear results. Please check if the server is running.")
+    } finally {
+      setIsClearLoading(false)
+    }
+  }
+
   const addRule = () => {
     setRules([...rules, { title: "", content: "" }])
   }
@@ -270,12 +297,12 @@ ${rulesXML}
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       {/* Navigation */}
-      <nav className="w-full px-6 py-4 bg-white/70 backdrop-blur-sm border-b border-slate-200">
+      <nav className="px-6 py-4 bg-white/70 backdrop-blur-sm border-b border-slate-200">
         <div className="container mx-auto flex justify-between items-center">
           <Link href="/">
-            <Button variant="outline" className="gap-2">
-              <Home className="w-4 h-4" />
-              Home
+            <Button onClick={clearResults} disabled={isClearLoading} variant="outline" className="gap-2">
+              {isClearLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <XIcon className="w-4 h-4" />}
+              Clear
             </Button>
           </Link>
         </div>
@@ -322,7 +349,7 @@ ${rulesXML}
               className="gap-2 bg-white/70 backdrop-blur-sm border-slate-300"
             >
               {isExtractLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Map className="h-4 w-4" />}
-              Extract & Map
+              Extract & Map (First Process URLs)
             </Button>
           </div>
         </form>
