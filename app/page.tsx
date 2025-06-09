@@ -302,7 +302,7 @@ ${rulesXML}
           <Link href="/">
             <Button onClick={clearResults} disabled={isClearLoading} variant="outline" className="gap-2">
               {isClearLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <XIcon className="w-4 h-4" />}
-              Clear
+              Clear Database
             </Button>
           </Link>
         </div>
