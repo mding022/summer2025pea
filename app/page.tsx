@@ -85,7 +85,7 @@ interface GISResponse {
   query: string
 }
 
-const baseUrl = "http://localhost:8000"
+const baseUrl = "https://service.millerding.com"
 
 export default function SearchDashboard() {
   const [query, setQuery] = useState("")
