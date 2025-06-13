@@ -25,6 +25,7 @@ import {
   Globe,
   Building,
   Navigation,
+  AlertCircle,
 } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
@@ -33,6 +34,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import Link from "next/link"
 
 interface SearchResult {
@@ -69,10 +71,11 @@ interface GISResponse {
     state_district?: string
   }
   location_data: {
-    lat: number
-    lon: number
-    name: string
-    source: string
+    lat?: number
+    lon?: number
+    name?: string
+    source?: string
+    error?: string
   }
   nearby_communities: Array<{
     lat: number
@@ -82,7 +85,7 @@ interface GISResponse {
   query: string
 }
 
-const baseUrl = "https://service.millerding.com"
+const baseUrl = "http://localhost:8000"
 
 export default function SearchDashboard() {
   const [query, setQuery] = useState("")
@@ -116,6 +119,7 @@ export default function SearchDashboard() {
   const [gisQuery, setGisQuery] = useState("")
   const [gisData, setGisData] = useState<GISResponse | null>(null)
   const [isGISLoading, setIsGISLoading] = useState(false)
+  const [gisError, setGisError] = useState("")
 
   const rulesToXML = (rulesArray: Rule[]): string => {
     const rulesXML = rulesArray
@@ -213,6 +217,40 @@ ${rulesXML}
     })
 
     return root
+  }
+
+  // Function to check if GIS data has valid location information
+  const hasValidLocationData = (data: GISResponse): boolean => {
+    return !!(
+      data.location_data &&
+      !data.location_data.error &&
+      data.location_data.lat !== undefined &&
+      data.location_data.lon !== undefined &&
+      data.location_data.name
+    )
+  }
+
+  // Function to check if administrative data has any meaningful content
+  const hasAdministrativeData = (data: GISResponse): boolean => {
+    return !!(
+      data.administrative_data &&
+      Object.keys(data.administrative_data).length > 0 &&
+      Object.values(data.administrative_data).some((value) => value && value.trim() !== "")
+    )
+  }
+
+  // Function to get error message from GIS response
+  const getGISErrorMessage = (data: GISResponse): string => {
+    if (data.location_data?.error) {
+      return data.location_data.error
+    }
+
+    // Check if we have any meaningful data at all
+    if (!hasValidLocationData(data) && !hasAdministrativeData(data) && data.nearby_communities.length === 0) {
+      return "No location data found for this query. Please try a different search term or check the spelling."
+    }
+
+    return ""
   }
 
   const fetchSearchResults = async () => {
@@ -348,18 +386,28 @@ ${rulesXML}
     if (!gisQuery.trim()) return
 
     setIsGISLoading(true)
+    setGisError("")
+    setGisData(null)
+
     try {
       const response = await fetch(`${baseUrl}/gis?query=${encodeURIComponent(gisQuery)}`)
 
       if (!response.ok) {
-        throw new Error(`Error: ${response.status}`)
+        throw new Error(`HTTP Error: ${response.status}`)
       }
 
       const data = await response.json()
-      setGisData(data)
+
+      // Check for errors in the response data
+      const errorMessage = getGISErrorMessage(data)
+      if (errorMessage) {
+        setGisError(errorMessage)
+      } else {
+        setGisData(data)
+      }
     } catch (err) {
       console.error("Failed to fetch GIS data:", err)
-      setError("Failed to fetch GIS data. Please check if the server is running.")
+      setGisError("Failed to connect to the GIS service. Please check if the server is running and try again.")
     } finally {
       setIsGISLoading(false)
     }
@@ -478,6 +526,12 @@ ${rulesXML}
   const handleGISSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     fetchGISData()
+  }
+
+  const resetGISModal = () => {
+    setGisData(null)
+    setGisError("")
+    setGisQuery("")
   }
 
   useEffect(() => {
@@ -614,7 +668,14 @@ ${rulesXML}
                 {isClearLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <XIcon className="w-4 h-4" />}
                 Clear Database
               </Button>
-              <Button onClick={() => setShowGISModal(true)} variant="outline" className="gap-2">
+              <Button
+                onClick={() => {
+                  setShowGISModal(true)
+                  resetGISModal()
+                }}
+                variant="outline"
+                className="gap-2"
+              >
                 <MapPin className="w-4 h-4" />
                 GIS Geocode
               </Button>
@@ -1008,6 +1069,13 @@ ${rulesXML}
               </Button>
             </form>
 
+            {gisError && (
+              <Alert className="border-red-200 bg-red-50">
+                <AlertCircle className="h-4 w-4 text-red-600" />
+                <AlertDescription className="text-red-700">{gisError}</AlertDescription>
+              </Alert>
+            )}
+
             {gisData && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -1020,87 +1088,95 @@ ${rulesXML}
                 </div>
 
                 {/* Location Data */}
-                <Card className="bg-white/80 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-blue-700">
-                      <Navigation className="h-5 w-5" />
-                      Location Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <div className="text-sm font-medium text-slate-600">Full Name</div>
-                        <div className="text-slate-900">{gisData.location_data.name}</div>
+                {hasValidLocationData(gisData) && (
+                  <Card className="bg-white/80 backdrop-blur-sm">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-blue-700">
+                        <Navigation className="h-5 w-5" />
+                        Location Information
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-sm font-medium text-slate-600">Full Name</div>
+                          <div className="text-slate-900">{gisData.location_data.name}</div>
+                        </div>
+                        {gisData.location_data.source && (
+                          <div>
+                            <div className="text-sm font-medium text-slate-600">Source</div>
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                              {gisData.location_data.source}
+                            </Badge>
+                          </div>
+                        )}
+                        <div>
+                          <div className="text-sm font-medium text-slate-600">Latitude</div>
+                          <div className="text-slate-900 font-mono">{gisData.location_data.lat!.toFixed(7)}</div>
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-slate-600">Longitude</div>
+                          <div className="text-slate-900 font-mono">{gisData.location_data.lon!.toFixed(7)}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="text-sm font-medium text-slate-600">Source</div>
-                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                          {gisData.location_data.source}
-                        </Badge>
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium text-slate-600">Latitude</div>
-                        <div className="text-slate-900 font-mono">{gisData.location_data.lat.toFixed(7)}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium text-slate-600">Longitude</div>
-                        <div className="text-slate-900 font-mono">{gisData.location_data.lon.toFixed(7)}</div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Administrative Data */}
-                <Card className="bg-white/80 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-purple-700">
-                      <Building className="h-5 w-5" />
-                      Administrative Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {Object.entries(gisData.administrative_data).map(([key, value]) => {
-                        if (!value) return null
-                        return (
-                          <div key={key}>
-                            <div className="text-sm font-medium text-slate-600 capitalize">
-                              {key.replace(/[-_]/g, " ").replace("ISO3166-2-lvl4", "ISO Code")}
+                {hasAdministrativeData(gisData) && (
+                  <Card className="bg-white/80 backdrop-blur-sm">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-purple-700">
+                        <Building className="h-5 w-5" />
+                        Administrative Information
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {Object.entries(gisData.administrative_data).map(([key, value]) => {
+                          if (!value || value.trim() === "") return null
+                          return (
+                            <div key={key}>
+                              <div className="text-sm font-medium text-slate-600 capitalize">
+                                {key.replace(/[-_]/g, " ").replace("ISO3166-2-lvl4", "ISO Code")}
+                              </div>
+                              <div className="text-slate-900">{value}</div>
                             </div>
-                            <div className="text-slate-900">{value}</div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
+                          )
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Nearby Communities */}
-                <Card className="bg-white/80 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-orange-700">
-                      <Globe className="h-5 w-5" />
-                      Nearby Communities ({gisData.nearby_communities.length})
-                    </CardTitle>
-                    <CardDescription>Communities in the surrounding area</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {gisData.nearby_communities.map((community, index) => (
-                        <div
-                          key={index}
-                          className="p-3 bg-slate-50/70 rounded-lg border border-slate-200 hover:bg-slate-100/70 transition-colors"
-                        >
-                          <div className="font-medium text-slate-900">{community.name}</div>
-                          <div className="text-xs text-slate-600 font-mono mt-1">
-                            {community.lat.toFixed(6)}, {community.lon.toFixed(6)}
+                {gisData.nearby_communities.length > 0 && (
+                  <Card className="bg-white/80 backdrop-blur-sm">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-orange-700">
+                        <Globe className="h-5 w-5" />
+                        Nearby Communities ({gisData.nearby_communities.length})
+                      </CardTitle>
+                      <CardDescription>Communities in the surrounding area</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {gisData.nearby_communities.map((community, index) => (
+                          <div
+                            key={index}
+                            className="p-3 bg-slate-50/70 rounded-lg border border-slate-200 hover:bg-slate-100/70 transition-colors"
+                          >
+                            <div className="font-medium text-slate-900">{community.name}</div>
+                            <div className="text-xs text-slate-600 font-mono mt-1">
+                              {community.lat.toFixed(6)}, {community.lon.toFixed(6)}
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </motion.div>
             )}
 
