@@ -36,6 +36,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Link from "next/link"
+import { ClerkProvider, SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs"
 
 interface SearchResult {
   url: string
@@ -86,6 +87,7 @@ interface GISResponse {
 }
 
 const baseUrl = "https://service.millerding.com"
+// const baseUrl = "http://localhost:8000"
 
 export default function SearchDashboard() {
   const [query, setQuery] = useState("")
@@ -660,7 +662,7 @@ ${rulesXML}
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       {/* Navigation */}
-      <nav className="px-6 py-4 bg-white/70 backdrop-blur-sm border-b border-slate-200">
+      <nav className="px-6 py-4 bg-white/70 backdrop-blur-sm border-b border-slate-200 flex justify-between">
         <div className="container mx-auto flex justify-between items-center">
           <Link href="/">
             <div className="flex gap-2">
@@ -682,6 +684,19 @@ ${rulesXML}
             </div>
           </Link>
         </div>
+
+        <ClerkProvider>
+          <SignedOut>
+            <SignInButton>
+              <Button variant="outline" className="gap-2">
+                Sign In
+              </Button>
+            </SignInButton>
+          </SignedOut>
+          <SignedIn>
+            <UserButton />
+          </SignedIn>
+        </ClerkProvider>
       </nav>
 
       <div className="container mx-auto px-6 py-8 flex-grow">
