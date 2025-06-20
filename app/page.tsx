@@ -122,6 +122,7 @@ export default function SearchDashboard() {
   const [gisData, setGisData] = useState<GISResponse | null>(null)
   const [isGISLoading, setIsGISLoading] = useState(false)
   const [gisError, setGisError] = useState("")
+  const [methodologyVersion, setMethodologyVersion] = useState<1 | 2 | 3>(1)
 
   const rulesToXML = (rulesArray: Rule[]): string => {
     const rulesXML = rulesArray
@@ -312,12 +313,10 @@ ${rulesXML}
     }
   }
 
-  const fetchMethodology = async () => {
-    if (initialMethodologyLoadedRef.current) return
-
+  const fetchMethodology = async (version: 1 | 2 | 3 = 1) => {
     setIsMethodologyLoading(true)
     try {
-      const response = await fetch(`${baseUrl}/methodology`)
+      const response = await fetch(`${baseUrl}/methodology?version=${version}`)
 
       if (!response.ok) {
         throw new Error(`Error: ${response.status}`)
@@ -328,7 +327,6 @@ ${rulesXML}
       if (parsedRules.length > 0) {
         setRules(parsedRules)
       }
-      initialMethodologyLoadedRef.current = true
     } catch (err) {
       console.error("Failed to fetch methodology:", err)
     } finally {
@@ -538,9 +536,14 @@ ${rulesXML}
 
   useEffect(() => {
     fetchAllResults()
-    fetchMethodology()
+    fetchMethodology(1) // Load version 1 by default
     fetchFiles()
   }, [])
+
+  useEffect(() => {
+    fetchMethodology(methodologyVersion)
+    initialMethodologyLoadedRef.current = true
+  }, [methodologyVersion])
 
   useEffect(() => {
     if (currentResults.length > 0) {
@@ -895,7 +898,7 @@ ${rulesXML}
                 <div>
                   <h2 className="text-2xl font-semibold text-slate-900 mb-1">Search Methodology</h2>
                   <p className="text-sm text-slate-600">
-                    Define search rules with titles and descriptions. Changes are automatically saved.
+                    Choose from preset methodologies or define custom search rules. Changes are automatically saved.
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -919,6 +922,48 @@ ${rulesXML}
                   >
                     <Plus className="h-3 w-3" />
                     Add Rule
+                  </Button>
+                </div>
+              </div>
+
+              {/* Methodology Version Tabs */}
+              <div className="mb-6">
+                <div className="flex gap-2 mb-4">
+                  <Button
+                    onClick={() => setMethodologyVersion(1)}
+                    variant={methodologyVersion === 1 ? "default" : "outline"}
+                    size="sm"
+                    className={
+                      methodologyVersion === 1
+                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                        : ""
+                    }
+                  >
+                    Preset 1
+                  </Button>
+                  <Button
+                    onClick={() => setMethodologyVersion(2)}
+                    variant={methodologyVersion === 2 ? "default" : "outline"}
+                    size="sm"
+                    className={
+                      methodologyVersion === 2
+                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                        : ""
+                    }
+                  >
+                    Preset 2
+                  </Button>
+                  <Button
+                    onClick={() => setMethodologyVersion(3)}
+                    variant={methodologyVersion === 3 ? "default" : "outline"}
+                    size="sm"
+                    className={
+                      methodologyVersion === 3
+                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                        : ""
+                    }
+                  >
+                    Preset 3
                   </Button>
                 </div>
               </div>
