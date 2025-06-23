@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect, useRef } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { AnimatePresence } from "framer-motion"
 import {
   Search,
   Clock,
@@ -26,6 +26,7 @@ import {
   Building,
   Navigation,
   AlertCircle,
+  Menu,
 } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
@@ -86,8 +87,8 @@ interface GISResponse {
   query: string
 }
 
-const baseUrl = "https://service.millerding.com"
-// const baseUrl = "http://localhost:8000"
+// const baseUrl = "https://service.millerding.com"
+const baseUrl = "http://localhost:8000"
 
 export default function SearchDashboard() {
   const [query, setQuery] = useState("")
@@ -114,7 +115,6 @@ export default function SearchDashboard() {
   const [isFilesLoading, setIsFilesLoading] = useState(false)
   const [selectedFile, setSelectedFile] = useState<string | null>(null)
   const [showPdfModal, setShowPdfModal] = useState(false)
-  const [currentPath, setCurrentPath] = useState<string[]>([])
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
   const [deletingResults, setDeletingResults] = useState<Set<string>>(new Set())
   const [showGISModal, setShowGISModal] = useState(false)
@@ -123,6 +123,7 @@ export default function SearchDashboard() {
   const [isGISLoading, setIsGISLoading] = useState(false)
   const [gisError, setGisError] = useState("")
   const [methodologyVersion, setMethodologyVersion] = useState<1 | 2 | 3>(1)
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
 
   const rulesToXML = (rulesArray: Rule[]): string => {
     const rulesXML = rulesArray
@@ -564,28 +565,6 @@ ${rulesXML}
     fetchSearchResults()
   }
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
-    },
-  }
-
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        type: "spring",
-        stiffness: 100,
-      },
-    },
-  }
-
   // Function to format filenames for display
   const formatFilename = (filename: string) => {
     // Get just the filename without the path
@@ -619,41 +598,39 @@ ${rulesXML}
       if (item.isFolder) {
         const isExpanded = expandedFolders.has(item.path)
         return (
-          <div key={item.path} className="mb-2">
+          <div key={item.path} className="mb-1">
             <div
-              className="flex items-center gap-2 p-2 rounded-md hover:bg-slate-100 cursor-pointer"
+              className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
               onClick={() => toggleFolder(item.path)}
             >
               {isExpanded ? (
-                <ChevronDown className="h-4 w-4 text-slate-500" />
+                <ChevronDown className="h-4 w-4 text-gray-400 flex-shrink-0" />
               ) : (
-                <ChevronRight className="h-4 w-4 text-slate-500" />
+                <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
               )}
-              <div className="bg-amber-50 text-amber-600 p-2 rounded-md">
-                <FolderIcon className="h-5 w-5" />
+              <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                <FolderIcon className="h-4 w-4" />
               </div>
-              <span className="font-medium text-slate-800">{item.name}</span>
+              <span className="font-medium text-gray-900 truncate">{item.name}</span>
             </div>
-            {isExpanded && item.children && (
-              <div className="pl-6 border-l border-slate-200 ml-3 mt-1">{renderFileSystemItems(item.children)}</div>
-            )}
+            {isExpanded && item.children && <div className="pl-7 mt-1">{renderFileSystemItems(item.children)}</div>}
           </div>
         )
       } else {
         return (
           <div
             key={item.path}
-            className="flex items-center gap-2 p-2 rounded-md hover:bg-slate-100 cursor-pointer ml-6"
+            className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer ml-7 transition-colors group"
             onClick={() => openPdf(item.path)}
           >
-            <div className="bg-red-50 text-red-600 p-2 rounded-md">
-              <FileIcon className="h-5 w-5" />
+            <div className="w-8 h-8 bg-red-50 text-red-600 rounded-lg flex items-center justify-center flex-shrink-0">
+              <FileIcon className="h-4 w-4" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-medium text-slate-800 truncate">{formatFilename(item.name)}</div>
-              <div className="text-xs text-slate-500">{getDomain(item.name)}</div>
+              <div className="font-medium text-gray-900 truncate">{formatFilename(item.name)}</div>
+              <div className="text-sm text-gray-500 truncate">{getDomain(item.name)}</div>
             </div>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 flex-shrink-0">
               <ExternalLinkIcon className="h-4 w-4" />
             </Button>
           </div>
@@ -663,13 +640,71 @@ ${rulesXML}
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-white flex flex-col">
       {/* Navigation */}
-      <nav className="px-6 py-4 bg-white/70 backdrop-blur-sm border-b border-slate-200 flex justify-between">
-        <div className="container mx-auto flex justify-between items-center">
-          <Link href="/">
-            <div className="flex gap-2">
-              <Button onClick={clearResults} disabled={isClearLoading} variant="outline" className="gap-2">
+      <nav className="border-b border-gray-100 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-4">
+              <Link href="/" className="text-xl font-semibold text-gray-900">
+                S25 PEA
+              </Link>
+
+              {/* Desktop Actions */}
+              <div className="hidden md:flex gap-2">
+                <Button onClick={clearResults} disabled={isClearLoading} variant="ghost" size="sm" className="gap-2">
+                  {isClearLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <XIcon className="w-4 h-4" />}
+                  Clear
+                </Button>
+                <Button
+                  onClick={() => {
+                    setShowGISModal(true)
+                    resetGISModal()
+                  }}
+                  variant="ghost"
+                  size="sm"
+                  className="gap-2"
+                >
+                  <MapPin className="w-4 h-4" />
+                  Geocode
+                </Button>
+              </div>
+
+              {/* Mobile Menu Button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="md:hidden"
+                onClick={() => setShowMobileMenu(!showMobileMenu)}
+              >
+                <Menu className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <ClerkProvider>
+              <SignedOut>
+                <SignInButton>
+                  <Button variant="ghost" size="sm">
+                    Sign In
+                  </Button>
+                </SignInButton>
+              </SignedOut>
+              <SignedIn>
+                <UserButton />
+              </SignedIn>
+            </ClerkProvider>
+          </div>
+
+          {/* Mobile Actions Menu */}
+          {showMobileMenu && (
+            <div className="md:hidden mt-4 pt-4 border-t border-gray-100 flex flex-col gap-2">
+              <Button
+                onClick={clearResults}
+                disabled={isClearLoading}
+                variant="ghost"
+                size="sm"
+                className="gap-2 justify-start"
+              >
                 {isClearLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <XIcon className="w-4 h-4" />}
                 Clear Database
               </Button>
@@ -677,120 +712,111 @@ ${rulesXML}
                 onClick={() => {
                   setShowGISModal(true)
                   resetGISModal()
+                  setShowMobileMenu(false)
                 }}
-                variant="outline"
-                className="gap-2"
+                variant="ghost"
+                size="sm"
+                className="gap-2 justify-start"
               >
                 <MapPin className="w-4 h-4" />
                 GIS Geocode
               </Button>
             </div>
-          </Link>
+          )}
         </div>
-
-        <ClerkProvider>
-          <SignedOut>
-            <SignInButton>
-              <Button variant="outline" className="gap-2">
-                Sign In
-              </Button>
-            </SignInButton>
-          </SignedOut>
-          <SignedIn>
-            <UserButton />
-          </SignedIn>
-        </ClerkProvider>
       </nav>
 
-      <div className="container mx-auto px-6 py-8 flex-grow">
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <h1 className="text-4xl font-bold mb-2 tracking-tight bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900 bg-clip-text text-transparent">
-            Agentic Research Model
-          </h1>
-          <p className="text-lg text-slate-600 mb-8">Summer 2025 PEA - Search Tool</p>
-        </motion.div>
+      <div className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 w-full">
+        {/* Header */}
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Agentic Research Model</h1>
+          <p className="text-gray-600">AI-powered search and analysis tool</p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="mb-8">
-          <div className="flex gap-2">
-            <Input
-              type="text"
-              placeholder="Enter search query..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="bg-white/70 backdrop-blur-sm border-slate-300 focus:border-blue-500 focus:ring-blue-500"
-            />
-            <Button
-              type="submit"
-              disabled={isLoading || !query.trim()}
-              className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-            >
-              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              Search
-            </Button>
-            <Button
-              onClick={fetchUrls}
-              disabled={isUrlsLoading}
-              variant="outline"
-              className="gap-2 bg-white/70 backdrop-blur-sm border-slate-300"
-            >
-              {isUrlsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LinkIcon className="h-4 w-4" />}
-              Process URLs
-            </Button>
-            <Button
-              onClick={runExtract}
-              disabled={isExtractLoading}
-              variant="outline"
-              className="gap-2 bg-white/70 backdrop-blur-sm border-slate-300"
-            >
-              {isExtractLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Map className="h-4 w-4" />}
-              Extract & Map
-            </Button>
+        {/* Search Bar */}
+        <form onSubmit={handleSubmit} className="mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1">
+              <Input
+                type="text"
+                placeholder="Enter search query..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="h-12 text-base border-gray-200 focus:border-gray-900 focus:ring-gray-900"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="submit"
+                disabled={isLoading || !query.trim()}
+                className="h-12 px-4 sm:px-6 bg-gray-900 hover:bg-gray-800 text-white flex-1 sm:flex-none"
+              >
+                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                <span className="ml-2 sm:hidden">Search</span>
+              </Button>
+              <Button
+                onClick={fetchUrls}
+                disabled={isUrlsLoading}
+                variant="outline"
+                className="h-12 px-3 sm:px-4 border-gray-200 hover:bg-gray-50"
+              >
+                {isUrlsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LinkIcon className="h-4 w-4" />}
+              </Button>
+              <Button
+                onClick={runExtract}
+                disabled={isExtractLoading}
+                variant="outline"
+                className="h-12 px-3 sm:px-4 border-gray-200 hover:bg-gray-50"
+              >
+                {isExtractLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Map className="h-4 w-4" />}
+              </Button>
+            </div>
           </div>
         </form>
 
         {error && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="bg-red-50 text-red-700 p-4 rounded-lg mb-4 border border-red-200"
-          >
-            {error}
-            <Button onClick={() => setError("")} variant="ghost" size="sm" className="ml-2 h-auto p-1">
-              <X className="h-3 w-3" />
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-red-800 break-words">{error}</p>
+            </div>
+            <Button onClick={() => setError("")} variant="ghost" size="sm" className="h-6 w-6 p-0 flex-shrink-0">
+              <X className="h-4 w-4" />
             </Button>
-          </motion.div>
+          </div>
         )}
 
+        {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-4 mb-8 bg-white/70 backdrop-blur-sm">
+          <TabsList className="grid grid-cols-2 sm:grid-cols-4 mb-6 sm:mb-8 bg-gray-100 p-1 rounded-lg w-full">
             <TabsTrigger
               value="current"
-              className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white"
+              className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm text-sm"
             >
               <Search className="h-4 w-4" />
-              Current Search
+              <span className="hidden sm:inline">Current</span>
             </TabsTrigger>
             <TabsTrigger
               value="previous"
-              className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white"
+              className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm text-sm"
             >
               <Clock className="h-4 w-4" />
-              Search Database
+              <span className="hidden sm:inline">Database</span>
               {activeTab === "previous" && isLoading && <Loader2 className="h-3 w-3 ml-1 animate-spin" />}
             </TabsTrigger>
             <TabsTrigger
               value="methodology"
-              className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white"
+              className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm text-sm"
             >
               <FileText className="h-4 w-4" />
-              Search Methodology
+              <span className="hidden sm:inline">Methodology</span>
             </TabsTrigger>
             <TabsTrigger
               value="files"
-              className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white"
+              className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm text-sm"
             >
               <FolderIcon className="h-4 w-4" />
-              Documents
+              <span className="hidden sm:inline">Documents</span>
               {activeTab === "files" && isFilesLoading && <Loader2 className="h-3 w-3 ml-1 animate-spin" />}
             </TabsTrigger>
           </TabsList>
@@ -798,50 +824,32 @@ ${rulesXML}
           <TabsContent value="current">
             <AnimatePresence mode="wait">
               {isLoading ? (
-                <motion.div
-                  key="loading"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="flex justify-center items-center py-20"
-                >
-                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                </motion.div>
+                <div className="flex justify-center items-center py-20">
+                  <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                </div>
               ) : currentResults.length > 0 ? (
-                <motion.div
-                  key="results"
-                  variants={containerVariants}
-                  initial="hidden"
-                  animate="visible"
-                  className="grid gap-6"
-                >
-                  <h2 className="text-2xl font-semibold mb-2 text-slate-900">Results for: &quot;{query}&quot;</h2>
+                <div className="space-y-4 sm:space-y-6">
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Results for "{query}"</h2>
                   {currentResults.map((result, index) => (
-                    <motion.div key={index} variants={itemVariants}>
-                      <ResultCard result={result} />
-                    </motion.div>
+                    <ResultCard key={index} result={result} />
                   ))}
-                </motion.div>
+                </div>
               ) : (
-                <motion.div
-                  key="no-results"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="text-center py-20 text-slate-600"
-                >
-                  Current search engine: <span className="font-bold text-blue-600">Google.</span>
-                  <br />
-                  <br />
-                  All research is completed using model{" "}
-                  <span className="font-bold text-blue-600">gemini-2.0-flash (Feb 25, 2025, Google)</span>, grounded by
-                  Google Search.
-                  <br />
-                  Documentation for{" "}
-                  <Link href={"https://ai.google.dev/gemini-api/docs/grounding?lang=python"} target="_blank">
-                    <span className="underline text-blue-600 hover:text-blue-800">Grounding with Google Search</span>.
-                  </Link>
-                </motion.div>
+                <div className="text-center py-20 text-gray-500">
+                  <div className="max-w-md mx-auto px-4">
+                    <p className="mb-4">
+                      Powered by <span className="font-semibold text-gray-900">Gemini 2.0 Flash</span> with Google
+                      Search grounding
+                    </p>
+                    <Link
+                      href="https://ai.google.dev/gemini-api/docs/grounding?lang=python"
+                      target="_blank"
+                      className="text-blue-600 hover:text-blue-800 underline"
+                    >
+                      Learn more about grounding
+                    </Link>
+                  </div>
+                </div>
               )}
             </AnimatePresence>
           </TabsContent>
@@ -849,60 +857,43 @@ ${rulesXML}
           <TabsContent value="previous">
             <AnimatePresence mode="wait">
               {activeTab === "previous" && isLoading ? (
-                <motion.div
-                  key="loading-previous"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="flex justify-center items-center py-20"
-                >
-                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                </motion.div>
+                <div className="flex justify-center items-center py-20">
+                  <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                </div>
               ) : (
-                <motion.div
-                  key="previous-results"
-                  variants={containerVariants}
-                  initial="hidden"
-                  animate="visible"
-                  className="grid gap-6"
-                >
-                  <h2 className="text-2xl font-semibold text-slate-900">
-                    Previous Search Results
-                    <div className="mb-2 text-sm text-slate-600">
-                      Recent searches displayed first. AI provides a confidence judgement of relevance and accuracy.
-                    </div>
-                  </h2>
+                <div className="space-y-4 sm:space-y-6">
+                  <div>
+                    <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-1">Search Database</h2>
+                    <p className="text-gray-600">Previous searches with AI confidence scoring</p>
+                  </div>
                   {previousResults.length > 0 ? (
-                    [...previousResults].reverse().map((result, index) => (
-                      <motion.div key={index} variants={itemVariants}>
+                    <div className="space-y-4">
+                      {[...previousResults].reverse().map((result, index) => (
                         <ResultCard
+                          key={index}
                           result={result}
                           onDelete={deleteResult}
                           isDeleting={deletingResults.has(result.url)}
                         />
-                      </motion.div>
-                    ))
+                      ))}
+                    </div>
                   ) : (
-                    <motion.div variants={itemVariants} className="text-center py-20 text-slate-600">
-                      No previous search results available.
-                    </motion.div>
+                    <div className="text-center py-20 text-gray-500">No previous search results available.</div>
                   )}
-                </motion.div>
+                </div>
               )}
             </AnimatePresence>
           </TabsContent>
 
           <TabsContent value="methodology">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-              <div className="flex justify-between items-start mb-6">
+            <div className="space-y-4 sm:space-y-6">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
                 <div>
-                  <h2 className="text-2xl font-semibold text-slate-900 mb-1">Search Methodology</h2>
-                  <p className="text-sm text-slate-600">
-                    Choose from preset methodologies or define custom search rules. Changes are automatically saved.
-                  </p>
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-1">Search Methodology</h2>
+                  <p className="text-gray-600">Configure search rules and parameters</p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-xs text-slate-500 flex items-center">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                  <div className="text-sm text-gray-500 flex items-center">
                     {isMethodologyLoading ? (
                       <>
                         <Loader2 className="h-3 w-3 mr-1 animate-spin" />
@@ -911,161 +902,134 @@ ${rulesXML}
                     ) : (
                       <>
                         <Save className="h-3 w-3 mr-1" />
-                        Auto-saved
+                        Saved
                       </>
                     )}
                   </div>
                   <Button
                     onClick={addRule}
                     size="sm"
-                    className="gap-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-xs px-3 py-1"
+                    className="bg-gray-900 hover:bg-gray-800 text-white w-full sm:w-auto"
                   >
-                    <Plus className="h-3 w-3" />
+                    <Plus className="h-4 w-4 mr-1" />
                     Add Rule
                   </Button>
                 </div>
               </div>
 
               {/* Methodology Version Tabs */}
-              <div className="mb-6">
-                <div className="flex gap-2 mb-4">
+              <div className="flex flex-wrap gap-2">
+                {[1, 2, 3].map((version) => (
                   <Button
-                    onClick={() => setMethodologyVersion(1)}
-                    variant={methodologyVersion === 1 ? "default" : "outline"}
+                    key={version}
+                    onClick={() => setMethodologyVersion(version as 1 | 2 | 3)}
+                    variant={methodologyVersion === version ? "default" : "outline"}
                     size="sm"
                     className={
-                      methodologyVersion === 1
-                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                        : ""
+                      methodologyVersion === version
+                        ? "bg-gray-900 hover:bg-gray-800 text-white"
+                        : "border-gray-200 hover:bg-gray-50"
                     }
                   >
-                    Preset 1
+                    Preset {version}
                   </Button>
-                  <Button
-                    onClick={() => setMethodologyVersion(2)}
-                    variant={methodologyVersion === 2 ? "default" : "outline"}
-                    size="sm"
-                    className={
-                      methodologyVersion === 2
-                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                        : ""
-                    }
-                  >
-                    Preset 2
-                  </Button>
-                  <Button
-                    onClick={() => setMethodologyVersion(3)}
-                    variant={methodologyVersion === 3 ? "default" : "outline"}
-                    size="sm"
-                    className={
-                      methodologyVersion === 3
-                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                        : ""
-                    }
-                  >
-                    Preset 3
-                  </Button>
-                </div>
+                ))}
               </div>
 
               <div className="space-y-4">
                 {rules.map((rule, index) => (
-                  <div key={index} className="group">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                        Rule {index + 1}
-                      </span>
+                  <div key={index} className="group p-4 border border-gray-200 rounded-lg">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm font-medium text-gray-500">Rule {index + 1}</span>
                       {rules.length > 1 && (
                         <Button
                           onClick={() => removeRule(index)}
                           variant="ghost"
                           size="sm"
-                          className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-red-600 h-6 w-6 p-0"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-600 h-6 w-6 p-0"
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>
                       )}
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       <Input
                         value={rule.title}
                         onChange={(e) => updateRule(index, "title", e.target.value)}
                         placeholder="Rule title..."
-                        className="bg-white/50 border-slate-200 focus:border-blue-500 focus:ring-blue-500 text-sm"
+                        className="border-gray-200 focus:border-gray-900 focus:ring-gray-900"
                       />
                       <Textarea
                         value={rule.content}
                         onChange={(e) => updateRule(index, "content", e.target.value)}
                         placeholder="Rule description..."
-                        className="bg-white/50 border-slate-200 focus:border-blue-500 focus:ring-blue-500 text-sm min-h-[80px] resize-none"
+                        className="border-gray-200 focus:border-gray-900 focus:ring-gray-900 min-h-[80px] resize-none"
                       />
                     </div>
                   </div>
                 ))}
               </div>
 
-              <div className="mt-8 pt-4 border-t border-slate-200">
-                <details className="group">
-                  <summary className="text-xs font-medium text-slate-500 uppercase tracking-wide cursor-pointer hover:text-slate-700 transition-colors">
-                    XML Preview
-                  </summary>
-                  <pre className="mt-2 text-xs text-slate-600 font-mono bg-slate-50 p-3 rounded border overflow-x-auto">
-                    {rulesToXML(rules)}
-                  </pre>
-                </details>
-              </div>
-            </motion.div>
+              <details className="group">
+                <summary className="text-sm font-medium text-gray-500 cursor-pointer hover:text-gray-700 transition-colors">
+                  XML Preview
+                </summary>
+                <pre className="mt-3 text-sm text-gray-600 font-mono bg-gray-50 p-4 rounded-lg border overflow-x-auto">
+                  {rulesToXML(rules)}
+                </pre>
+              </details>
+            </div>
           </TabsContent>
 
           <TabsContent value="files">
             <AnimatePresence mode="wait">
               {activeTab === "files" && isFilesLoading ? (
-                <motion.div
-                  key="loading-files"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="flex justify-center items-center py-20"
-                >
-                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                </motion.div>
+                <div className="flex justify-center items-center py-20">
+                  <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                </div>
               ) : (
-                <motion.div key="files-list" variants={containerVariants} initial="hidden" animate="visible">
-                  <div className="flex justify-between items-start mb-6">
+                <div className="space-y-4 sm:space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
                     <div>
-                      <h2 className="text-2xl font-semibold text-slate-900 mb-1">Document Drive</h2>
-                      <p className="text-sm text-slate-600">View and access PDF documents related to your research.</p>
+                      <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-1">Document Library</h2>
+                      <p className="text-gray-600">Access research documents and PDFs</p>
                     </div>
-                    <Button onClick={fetchFiles} size="sm" variant="outline" className="gap-1 text-xs px-3 py-1">
-                      <Loader2 className={`h-3 w-3 ${isFilesLoading ? "animate-spin" : "hidden"}`} />
-                      <span>Refresh</span>
+                    <Button
+                      onClick={fetchFiles}
+                      size="sm"
+                      variant="outline"
+                      className="border-gray-200 hover:bg-gray-50 w-full sm:w-auto"
+                    >
+                      <Loader2 className={`h-4 w-4 mr-1 ${isFilesLoading ? "animate-spin" : "hidden"}`} />
+                      Refresh
                     </Button>
                   </div>
 
-                  <div className="bg-white/80 backdrop-blur-sm rounded-lg border border-slate-200 p-4">
+                  <div className="border border-gray-200 rounded-lg p-4">
                     {fileSystem.length > 0 ? (
                       <div className="space-y-1">{renderFileSystemItems(fileSystem)}</div>
                     ) : (
-                      <div className="text-center py-10 text-slate-600">No documents available.</div>
+                      <div className="text-center py-10 text-gray-500">No documents available.</div>
                     )}
                   </div>
-                </motion.div>
+                </div>
               )}
             </AnimatePresence>
           </TabsContent>
         </Tabs>
       </div>
 
+      {/* Modals with mobile-friendly sizing */}
       <Dialog open={showUrlsModal} onOpenChange={setShowUrlsModal}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto bg-white/95 backdrop-blur-sm">
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto mx-4 sm:mx-auto">
           <DialogHeader>
-            <DialogTitle className="text-slate-900">List of grounded URLs</DialogTitle>
+            <DialogTitle className="text-gray-900">Grounded URLs</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             {urlsList.map((url, index) => (
-              <div key={index} className="p-3 bg-slate-50/70 rounded-lg border border-slate-200">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-mono text-slate-600">#{index + 1}</span>
+              <div key={index} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-mono text-gray-600">#{index + 1}</span>
                   <Button variant="ghost" size="sm" onClick={() => window.open(url, "_blank")} className="gap-2">
                     <LinkIcon className="h-3 w-3" />
                     Open
@@ -1075,7 +1039,7 @@ ${rulesXML}
                   href={url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-800 break-all"
+                  className="text-blue-600 hover:text-blue-800 break-all text-sm"
                 >
                   {url}
                 </a>
@@ -1086,11 +1050,13 @@ ${rulesXML}
       </Dialog>
 
       <Dialog open={showPdfModal} onOpenChange={setShowPdfModal}>
-        <DialogContent className="max-w-5xl max-h-[90vh] p-0 overflow-hidden bg-white/95 backdrop-blur-sm">
+        <DialogContent className="max-w-5xl max-h-[90vh] p-0 overflow-hidden mx-4 sm:mx-auto">
           <DialogHeader className="p-4 border-b">
-            <DialogTitle className="text-slate-900 pr-8">{selectedFile && formatFilename(selectedFile)}</DialogTitle>
+            <DialogTitle className="text-gray-900 pr-8 truncate">
+              {selectedFile && formatFilename(selectedFile)}
+            </DialogTitle>
           </DialogHeader>
-          <div className="h-[80vh]">
+          <div className="h-[70vh] sm:h-[80vh]">
             {selectedFile && (
               <iframe
                 src={`${baseUrl}/pdf?name=${encodeURIComponent(selectedFile)}`}
@@ -1103,29 +1069,29 @@ ${rulesXML}
       </Dialog>
 
       <Dialog open={showGISModal} onOpenChange={setShowGISModal}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white/95 backdrop-blur-sm">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
           <DialogHeader>
-            <DialogTitle className="text-slate-900 flex items-center gap-2">
+            <DialogTitle className="text-gray-900 flex items-center gap-2">
               <MapPin className="h-5 w-5" />
               GIS Geocoding Service
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-6">
-            <form onSubmit={handleGISSubmit} className="flex gap-2">
+            <form onSubmit={handleGISSubmit} className="flex flex-col sm:flex-row gap-2">
               <Input
                 type="text"
                 placeholder="Enter location (e.g., Hillcrest Mall)"
                 value={gisQuery}
                 onChange={(e) => setGisQuery(e.target.value)}
-                className="bg-white/70 backdrop-blur-sm border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                className="border-gray-200 focus:border-gray-900 focus:ring-gray-900 flex-1"
               />
               <Button
                 type="submit"
                 disabled={isGISLoading || !gisQuery.trim()}
-                className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                className="bg-gray-900 hover:bg-gray-800 text-white w-full sm:w-auto"
               >
                 {isGISLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                Geocode
+                <span className="ml-2 sm:hidden">Search</span>
               </Button>
             </form>
 
@@ -1137,19 +1103,12 @@ ${rulesXML}
             )}
 
             {gisData && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="space-y-4"
-              >
-                <div className="text-lg font-semibold text-slate-900 mb-4">
-                  Results for: &quot;{gisData.query}&quot;
-                </div>
+              <div className="space-y-4">
+                <div className="text-lg font-semibold text-gray-900">Results for "{gisData.query}"</div>
 
                 {/* Location Data */}
                 {hasValidLocationData(gisData) && (
-                  <Card className="bg-white/80 backdrop-blur-sm">
+                  <Card className="border-gray-200">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-blue-700">
                         <Navigation className="h-5 w-5" />
@@ -1157,26 +1116,26 @@ ${rulesXML}
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <div className="text-sm font-medium text-slate-600">Full Name</div>
-                          <div className="text-slate-900">{gisData.location_data.name}</div>
+                          <div className="text-sm font-medium text-gray-600">Full Name</div>
+                          <div className="text-gray-900 break-words">{gisData.location_data.name}</div>
                         </div>
                         {gisData.location_data.source && (
                           <div>
-                            <div className="text-sm font-medium text-slate-600">Source</div>
+                            <div className="text-sm font-medium text-gray-600">Source</div>
                             <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                               {gisData.location_data.source}
                             </Badge>
                           </div>
                         )}
                         <div>
-                          <div className="text-sm font-medium text-slate-600">Latitude</div>
-                          <div className="text-slate-900 font-mono">{gisData.location_data.lat!.toFixed(7)}</div>
+                          <div className="text-sm font-medium text-gray-600">Latitude</div>
+                          <div className="text-gray-900 font-mono text-sm">{gisData.location_data.lat!.toFixed(7)}</div>
                         </div>
                         <div>
-                          <div className="text-sm font-medium text-slate-600">Longitude</div>
-                          <div className="text-slate-900 font-mono">{gisData.location_data.lon!.toFixed(7)}</div>
+                          <div className="text-sm font-medium text-gray-600">Longitude</div>
+                          <div className="text-gray-900 font-mono text-sm">{gisData.location_data.lon!.toFixed(7)}</div>
                         </div>
                       </div>
                     </CardContent>
@@ -1185,7 +1144,7 @@ ${rulesXML}
 
                 {/* Administrative Data */}
                 {hasAdministrativeData(gisData) && (
-                  <Card className="bg-white/80 backdrop-blur-sm">
+                  <Card className="border-gray-200">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-purple-700">
                         <Building className="h-5 w-5" />
@@ -1193,15 +1152,15 @@ ${rulesXML}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {Object.entries(gisData.administrative_data).map(([key, value]) => {
                           if (!value || value.trim() === "") return null
                           return (
                             <div key={key}>
-                              <div className="text-sm font-medium text-slate-600 capitalize">
+                              <div className="text-sm font-medium text-gray-600 capitalize">
                                 {key.replace(/[-_]/g, " ").replace("ISO3166-2-lvl4", "ISO Code")}
                               </div>
-                              <div className="text-slate-900">{value}</div>
+                              <div className="text-gray-900 break-words">{value}</div>
                             </div>
                           )
                         })}
@@ -1212,7 +1171,7 @@ ${rulesXML}
 
                 {/* Nearby Communities */}
                 {gisData.nearby_communities.length > 0 && (
-                  <Card className="bg-white/80 backdrop-blur-sm">
+                  <Card className="border-gray-200">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-orange-700">
                         <Globe className="h-5 w-5" />
@@ -1221,14 +1180,14 @@ ${rulesXML}
                       <CardDescription>Communities in the surrounding area</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {gisData.nearby_communities.map((community, index) => (
                           <div
                             key={index}
-                            className="p-3 bg-slate-50/70 rounded-lg border border-slate-200 hover:bg-slate-100/70 transition-colors"
+                            className="p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
                           >
-                            <div className="font-medium text-slate-900">{community.name}</div>
-                            <div className="text-xs text-slate-600 font-mono mt-1">
+                            <div className="font-medium text-gray-900 break-words">{community.name}</div>
+                            <div className="text-xs text-gray-600 font-mono mt-1">
                               {community.lat.toFixed(6)}, {community.lon.toFixed(6)}
                             </div>
                           </div>
@@ -1237,21 +1196,22 @@ ${rulesXML}
                     </CardContent>
                   </Card>
                 )}
-              </motion.div>
+              </div>
             )}
 
             {isGISLoading && (
               <div className="flex justify-center items-center py-10">
-                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
               </div>
             )}
           </div>
         </DialogContent>
       </Dialog>
 
-      <footer className="w-full py-4 mt-8 border-t border-slate-200 bg-white/50 backdrop-blur-sm">
-        <div className="container mx-auto px-6 text-center text-sm text-slate-500">
-          Summer 2025 PEA Tool by Miller Ding for Dr. P. Haslam &amp; Dr. N. Ary.
+      {/* Footer - Sticky to bottom */}
+      <footer className="border-t border-gray-100 bg-gray-50 py-4 sm:py-6 mt-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center text-sm text-gray-500">
+          Summer 2025 PEA Tool by Miller Ding for Dr. P. Haslam & Dr. N. Ary
         </div>
       </footer>
     </div>
@@ -1268,7 +1228,7 @@ function ResultCard({
   isDeleting?: boolean
 }) {
   return (
-    <div className="group overflow-hidden bg-none backdrop-blur-sm border-slate-300 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 relative">
+    <div className="group p-4 sm:p-6 border border-gray-200 rounded-lg hover:border-gray-300 transition-all duration-200 relative">
       {onDelete && (
         <Button
           onClick={(e) => {
@@ -1279,33 +1239,40 @@ function ResultCard({
           disabled={isDeleting}
           variant="ghost"
           size="sm"
-          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-red-600 h-8 w-8 p-0 bg-white/80 backdrop-blur-sm"
+          className="absolute top-3 sm:top-4 right-3 sm:right-4 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-600 h-8 w-8 p-0"
         >
           {isDeleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
         </Button>
       )}
-      <div className="pb-2">
-        <div className="text-xl">
-          <a
-            href={result.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-blue-600 transition-colors text-slate-900"
-          >
-            {result.title}
-          </a>
+
+      <div className="space-y-3 pr-8 sm:pr-0">
+        <div>
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">
+            <a
+              href={result.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-blue-600 transition-colors break-words"
+            >
+              {result.title}
+            </a>
+          </h3>
+          <div className="text-sm text-gray-500 break-all">
+            {result.url.length > 60 ? `${result.url.substring(0, 60)}...` : result.url}
+          </div>
         </div>
-        <div className="text-sm text-slate-600">
-          {result.url.length > 120 ? `${result.url.substring(0, 120)}...` : result.url}
-        </div>
-      </div>
-      <div>
-        <p className="text-slate-700">{result.summary}</p>
-      </div>
-      <div className="flex justify-between pt-2 text-sm text-slate-600">
-        <div className="flex items-center gap-2">
-          <div className="border-blue-200 text-blue-700 bg-blue-50">{result.lang}</div>
-          <span>Confidence: {Number.parseFloat(result.confidence) * 100}%</span>
+
+        <p className="text-gray-700 leading-relaxed break-words">{result.summary}</p>
+
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-2">
+          <div className="flex items-center gap-3">
+            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+              {result.lang}
+            </Badge>
+            <span className="text-sm text-gray-600">
+              Confidence: {Math.round(Number.parseFloat(result.confidence) * 100)}%
+            </span>
+          </div>
         </div>
       </div>
     </div>
