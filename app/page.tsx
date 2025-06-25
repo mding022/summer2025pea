@@ -27,6 +27,11 @@ import {
   Navigation,
   AlertCircle,
   Menu,
+  Star,
+  TrendingUp,
+  SmileIcon,
+  MehIcon,
+  FrownIcon,
 } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
@@ -42,8 +47,6 @@ import { ClerkProvider, SignedIn, SignedOut, SignInButton, UserButton } from "@c
 interface SearchResult {
   url: string
   title: string
-  summary: string
-  lang: string
   confidence: string
 }
 
@@ -87,8 +90,8 @@ interface GISResponse {
   query: string
 }
 
-const baseUrl = "https://service.millerding.com"
-// const baseUrl = "http://localhost:8000"
+// const baseUrl = "https://service.millerding.com"
+const baseUrl = "http://localhost:8000"
 
 export default function SearchDashboard() {
   const [query, setQuery] = useState("")
@@ -255,6 +258,43 @@ ${rulesXML}
     }
 
     return ""
+  }
+
+  // Function to get confidence level styling
+  const getConfidenceStyle = (confidence: string) => {
+    const confidenceNum = Number.parseFloat(confidence) * 100
+    if (confidenceNum >= 80) {
+      return {
+        color: "text-green-700",
+        bg: "bg-green-50",
+        border: "border-green-200",
+        icon: SmileIcon,
+      }
+    } else if (confidenceNum >= 60) {
+      return {
+        color: "text-blue-700",
+        bg: "bg-blue-50",
+        border: "border-blue-200",
+        icon: MehIcon,
+      }
+    } else {
+      return {
+        color: "text-orange-700",
+        bg: "bg-orange-50",
+        border: "border-orange-200",
+        icon: FrownIcon,
+      }
+    }
+  }
+
+  // Function to extract domain from URL
+  const extractDomain = (url: string) => {
+    try {
+      const domain = new URL(url).hostname
+      return domain.replace("www.", "")
+    } catch {
+      return url
+    }
   }
 
   const fetchSearchResults = async () => {
@@ -828,11 +868,17 @@ ${rulesXML}
                   <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
                 </div>
               ) : currentResults.length > 0 ? (
-                <div className="space-y-4 sm:space-y-6">
-                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Results for "{query}"</h2>
-                  {currentResults.map((result, index) => (
-                    <ResultCard key={index} result={result} />
-                  ))}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+                      Results for "{query}" ({currentResults.length})
+                    </h2>
+                  </div>
+                  <div className="grid gap-3">
+                    {currentResults.map((result, index) => (
+                      <ResultCard key={index} result={result} />
+                    ))}
+                  </div>
                 </div>
               ) : (
                 <div className="text-center py-20 text-gray-500">
@@ -861,13 +907,17 @@ ${rulesXML}
                   <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
                 </div>
               ) : (
-                <div className="space-y-4 sm:space-y-6">
-                  <div>
-                    <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-1">Search Database</h2>
-                    <p className="text-gray-600">Previous searches with AI confidence scoring</p>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-1">
+                        Search Database ({previousResults.length})
+                      </h2>
+                      <p className="text-gray-600">Previous searches with AI confidence scoring</p>
+                    </div>
                   </div>
                   {previousResults.length > 0 ? (
-                    <div className="space-y-4">
+                    <div className="grid gap-3">
                       {[...previousResults].reverse().map((result, index) => (
                         <ResultCard
                           key={index}
@@ -1227,8 +1277,13 @@ function ResultCard({
   onDelete?: (url: string) => void
   isDeleting?: boolean
 }) {
+  const confidenceStyle = getConfidenceStyle(result.confidence)
+  const ConfidenceIcon = confidenceStyle.icon
+  const confidencePercentage = Math.round(Number.parseFloat(result.confidence) * 100)
+  const domain = extractDomain(result.url)
+
   return (
-    <div className="group p-4 sm:p-6 border border-gray-200 rounded-lg hover:border-gray-300 transition-all duration-200 relative">
+    <div className="group p-4 border border-gray-200 rounded-lg hover:border-gray-300 hover:shadow-sm transition-all duration-200 relative bg-white">
       {onDelete && (
         <Button
           onClick={(e) => {
@@ -1239,42 +1294,85 @@ function ResultCard({
           disabled={isDeleting}
           variant="ghost"
           size="sm"
-          className="absolute top-3 sm:top-4 right-3 sm:right-4 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-600 h-8 w-8 p-0"
+          className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-600 h-7 w-7 p-0 z-10"
         >
           {isDeleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
         </Button>
       )}
 
-      <div className="space-y-3 pr-8 sm:pr-0">
-        <div>
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">
+      <div className="flex items-start gap-4 pr-8">
+        {/* Confidence Badge */}
+        <div
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${confidenceStyle.bg} ${confidenceStyle.border} border flex-shrink-0`}
+        >
+          <ConfidenceIcon className={`h-3.5 w-3.5 ${confidenceStyle.color}`} />
+          <span className={`text-sm font-medium ${confidenceStyle.color}`}>{confidencePercentage}%</span>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0 space-y-2">
+          {/* Title */}
+          <h3 className="font-semibold text-gray-900 leading-tight">
             <a
               href={result.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-blue-600 transition-colors break-words"
+              className="hover:text-blue-600 transition-colors break-words line-clamp-2"
             >
               {result.title}
             </a>
           </h3>
-          <div className="text-sm text-gray-500 break-all">
-            {result.url.length > 60 ? `${result.url.substring(0, 60)}...` : result.url}
-          </div>
-        </div>
 
-        <p className="text-gray-700 leading-relaxed break-words">{result.summary}</p>
-
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-2">
-          <div className="flex items-center gap-3">
-            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-              {result.lang}
-            </Badge>
-            <span className="text-sm text-gray-600">
-              Confidence: {Math.round(Number.parseFloat(result.confidence) * 100)}%
-            </span>
+          {/* URL and Domain */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-gray-100 rounded-sm flex items-center justify-center flex-shrink-0">
+                <LinkIcon className="h-2.5 w-2.5 text-gray-500" />
+              </div>
+              <span className="text-sm font-medium text-gray-700">{domain}</span>
+            </div>
+            <div className="text-xs text-gray-500 break-all sm:truncate">
+              {result.url.length > 80 ? `${result.url.substring(0, 80)}...` : result.url}
+            </div>
           </div>
         </div>
       </div>
     </div>
   )
+}
+
+// Helper functions moved outside component
+function getConfidenceStyle(confidence: string) {
+  const confidenceNum = Number.parseFloat(confidence) * 100
+  if (confidenceNum >= 80) {
+    return {
+      color: "text-green-700",
+      bg: "bg-green-50",
+      border: "border-green-200",
+      icon: Star,
+    }
+  } else if (confidenceNum >= 60) {
+    return {
+      color: "text-blue-700",
+      bg: "bg-blue-50",
+      border: "border-blue-200",
+      icon: TrendingUp,
+    }
+  } else {
+    return {
+      color: "text-orange-700",
+      bg: "bg-orange-50",
+      border: "border-orange-200",
+      icon: AlertCircle,
+    }
+  }
+}
+
+function extractDomain(url: string) {
+  try {
+    const domain = new URL(url).hostname
+    return domain.replace("www.", "")
+  } catch {
+    return url
+  }
 }
