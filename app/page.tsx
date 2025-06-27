@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState, useEffect, useRef } from "react"
 import { AnimatePresence } from "framer-motion"
+import XMLViewer from 'react-xml-viewer';
 import {
   Search,
   Clock,
@@ -29,9 +30,7 @@ import {
   Menu,
   Star,
   TrendingUp,
-  SmileIcon,
-  MehIcon,
-  FrownIcon,
+  Code,
 } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
@@ -48,6 +47,8 @@ interface SearchResult {
   url: string
   title: string
   confidence: string
+  lang?: string
+  methodology?: string
 }
 
 interface Rule {
@@ -90,8 +91,8 @@ interface GISResponse {
   query: string
 }
 
-const baseUrl = "https://service.millerding.com"
-// const baseUrl = "http://localhost:8000"
+// const baseUrl = "https://service.millerding.com"
+const baseUrl = "http://localhost:8000"
 
 export default function SearchDashboard() {
   const [query, setQuery] = useState("")
@@ -127,6 +128,9 @@ export default function SearchDashboard() {
   const [gisError, setGisError] = useState("")
   const [methodologyVersion, setMethodologyVersion] = useState<1 | 2 | 3>(1)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const [showMethodologyModal, setShowMethodologyModal] = useState(false)
+  const [selectedMethodology, setSelectedMethodology] = useState<string>("")
+  const [selectedResultTitle, setSelectedResultTitle] = useState<string>("")
 
   const rulesToXML = (rulesArray: Rule[]): string => {
     const rulesXML = rulesArray
@@ -162,6 +166,45 @@ ${rulesXML}
     } catch (err) {
       console.error("Error parsing XML:", err)
       return []
+    }
+  }
+
+  // Function to format XML for display
+  const formatXMLForDisplay = (xmlString: string): string => {
+    if (!xmlString) return "No methodology available"
+
+    try {
+      // Add proper indentation and formatting
+      const formatted = xmlString.replace(/></g, ">\n<").replace(/^\s*\n/gm, "")
+
+      // Split into lines and add proper indentation
+      const lines = formatted.split("\n")
+      let indentLevel = 0
+      const indentSize = 2
+
+      const formattedLines = lines.map((line) => {
+        const trimmed = line.trim()
+        if (!trimmed) return ""
+
+        // Decrease indent for closing tags
+        if (trimmed.startsWith("</")) {
+          indentLevel = Math.max(0, indentLevel - 1)
+        }
+
+        const indentedLine = " ".repeat(indentLevel * indentSize) + trimmed
+
+        // Increase indent for opening tags (but not self-closing or closing tags)
+        if (trimmed.startsWith("<") && !trimmed.startsWith("</") && !trimmed.endsWith("/>")) {
+          indentLevel++
+        }
+
+        return indentedLine
+      })
+
+      return formattedLines.join("\n")
+    } catch (err) {
+      console.error("Error formatting XML:", err)
+      return xmlString
     }
   }
 
@@ -268,21 +311,21 @@ ${rulesXML}
         color: "text-green-700",
         bg: "bg-green-50",
         border: "border-green-200",
-        icon: SmileIcon,
+        icon: Star,
       }
     } else if (confidenceNum >= 60) {
       return {
         color: "text-blue-700",
         bg: "bg-blue-50",
         border: "border-blue-200",
-        icon: MehIcon,
+        icon: TrendingUp,
       }
     } else {
       return {
         color: "text-orange-700",
         bg: "bg-orange-50",
         border: "border-orange-200",
-        icon: FrownIcon,
+        icon: AlertCircle,
       }
     }
   }
@@ -295,6 +338,13 @@ ${rulesXML}
     } catch {
       return url
     }
+  }
+
+  // Function to handle methodology modal
+  const openMethodologyModal = (methodology: string, title: string) => {
+    setSelectedMethodology(methodology)
+    setSelectedResultTitle(title)
+    setShowMethodologyModal(true)
   }
 
   const fetchSearchResults = async () => {
@@ -798,7 +848,7 @@ ${rulesXML}
                 onClick={fetchUrls}
                 disabled={isUrlsLoading}
                 variant="outline"
-                className="h-12 px-3 sm:px-4 border-gray-200 hover:bg-gray-50"
+                className="h-12 px-3 sm:px-4 border-gray-200 hover:bg-gray-50 bg-transparent"
               >
                 {isUrlsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LinkIcon className="h-4 w-4" />}
               </Button>
@@ -806,7 +856,7 @@ ${rulesXML}
                 onClick={runExtract}
                 disabled={isExtractLoading}
                 variant="outline"
-                className="h-12 px-3 sm:px-4 border-gray-200 hover:bg-gray-50"
+                className="h-12 px-3 sm:px-4 border-gray-200 hover:bg-gray-50 bg-transparent"
               >
                 {isExtractLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Map className="h-4 w-4" />}
               </Button>
@@ -876,7 +926,7 @@ ${rulesXML}
                   </div>
                   <div className="grid gap-3">
                     {currentResults.map((result, index) => (
-                      <ResultCard key={index} result={result} />
+                      <ResultCard key={index} result={result} onMethodologyClick={openMethodologyModal} />
                     ))}
                   </div>
                 </div>
@@ -924,6 +974,7 @@ ${rulesXML}
                           result={result}
                           onDelete={deleteResult}
                           isDeleting={deletingResults.has(result.url)}
+                          onMethodologyClick={openMethodologyModal}
                         />
                       ))}
                     </div>
@@ -1048,7 +1099,7 @@ ${rulesXML}
                       onClick={fetchFiles}
                       size="sm"
                       variant="outline"
-                      className="border-gray-200 hover:bg-gray-50 w-full sm:w-auto"
+                      className="border-gray-200 hover:bg-gray-50 w-full sm:w-auto bg-transparent"
                     >
                       <Loader2 className={`h-4 w-4 mr-1 ${isFilesLoading ? "animate-spin" : "hidden"}`} />
                       Refresh
@@ -1258,6 +1309,48 @@ ${rulesXML}
         </DialogContent>
       </Dialog>
 
+      {/* Methodology Modal */}
+      <Dialog open={showMethodologyModal} onOpenChange={setShowMethodologyModal}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden mx-4 sm:mx-auto">
+          <DialogHeader className="pb-4 border-b border-gray-200">
+            <DialogTitle className="text-gray-900 flex items-center gap-2">
+              <Code className="h-5 w-5 text-blue-600" />
+              Exact Methodology Used
+            </DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto max-h-[70vh]">
+            <div className="p-4">
+              <div className="bg-none rounded-lg p-4 overflow-x-auto">
+                <XMLViewer xml={selectedMethodology}
+                  indentSize={2}
+                  // When the xml is invalid, invalidXml component will be displayed.
+                  // Default: <div>Invalid XML!</div>
+                  invalidXml={<div>Invalid XML!</div>}
+
+                  // Displays line numbers on the left side when set to true.
+                  // Default: false
+                  showLineNumbers={true} />
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-4 border-t border-gray-200">
+            <Button
+              variant="outline"
+              onClick={() => {
+                navigator.clipboard.writeText(selectedMethodology)
+              }}
+              className="gap-2"
+            >
+              <Code className="h-4 w-4" />
+              Copy XML
+            </Button>
+            <Button onClick={() => setShowMethodologyModal(false)} className="bg-gray-900 hover:bg-gray-800">
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Footer - Sticky to bottom */}
       <footer className="border-t border-gray-100 bg-gray-50 py-4 sm:py-6 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center text-sm text-gray-500">
@@ -1272,10 +1365,12 @@ function ResultCard({
   result,
   onDelete,
   isDeleting,
+  onMethodologyClick,
 }: {
   result: SearchResult
   onDelete?: (url: string) => void
   isDeleting?: boolean
+  onMethodologyClick?: (methodology: string, title: string) => void
 }) {
   const confidenceStyle = getConfidenceStyle(result.confidence)
   const ConfidenceIcon = confidenceStyle.icon
@@ -1335,6 +1430,25 @@ function ResultCard({
               {result.url.length > 80 ? `${result.url.substring(0, 80)}...` : result.url}
             </div>
           </div>
+
+          {/* Methodology Button */}
+          {result.methodology && onMethodologyClick && (
+            <div className="flex items-center gap-2 mt-2">
+              <Button
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  onMethodologyClick(result.methodology!, result.title)
+                }}
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 py-1 bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 transition-colors gap-1.5"
+              >
+                <Code className="h-3 w-3 text-gray-600" />
+                <span className="text-xs text-gray-700 font-medium">View Methodology</span>
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -1374,5 +1488,44 @@ function extractDomain(url: string) {
     return domain.replace("www.", "")
   } catch {
     return url
+  }
+}
+
+// Function to format XML for display
+function formatXMLForDisplay(xmlString: string): string {
+  if (!xmlString) return "No methodology available"
+
+  try {
+    // Add proper indentation and formatting
+    const formatted = xmlString.replace(/></g, ">\n<").replace(/^\s*\n/gm, "")
+
+    // Split into lines and add proper indentation
+    const lines = formatted.split("\n")
+    let indentLevel = 0
+    const indentSize = 2
+
+    const formattedLines = lines.map((line) => {
+      const trimmed = line.trim()
+      if (!trimmed) return ""
+
+      // Decrease indent for closing tags
+      if (trimmed.startsWith("</")) {
+        indentLevel = Math.max(0, indentLevel - 1)
+      }
+
+      const indentedLine = " ".repeat(indentLevel * indentSize) + trimmed
+
+      // Increase indent for opening tags (but not self-closing or closing tags)
+      if (trimmed.startsWith("<") && !trimmed.startsWith("</") && !trimmed.endsWith("/>")) {
+        indentLevel++
+      }
+
+      return indentedLine
+    })
+
+    return formattedLines.join("\n")
+  } catch (err) {
+    console.error("Error formatting XML:", err)
+    return xmlString
   }
 }
