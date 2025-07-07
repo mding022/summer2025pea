@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState, useEffect, useRef } from "react"
 import { AnimatePresence } from "framer-motion"
-import XMLViewer from 'react-xml-viewer';
+import XMLViewer from "react-xml-viewer"
 import {
   Search,
   Clock,
@@ -31,6 +31,9 @@ import {
   Star,
   TrendingUp,
   Code,
+  Copy,
+  Edit,
+  Check,
 } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
@@ -91,6 +94,11 @@ interface GISResponse {
   query: string
 }
 
+interface CustomMethodology {
+  name: string
+  content?: string
+}
+
 const baseUrl = "https://s25api.millerding.com"
 // const baseUrl = "http://localhost:8000"
 
@@ -126,11 +134,18 @@ export default function SearchDashboard() {
   const [gisData, setGisData] = useState<GISResponse | null>(null)
   const [isGISLoading, setIsGISLoading] = useState(false)
   const [gisError, setGisError] = useState("")
-  const [methodologyVersion, setMethodologyVersion] = useState<1 | 2 | 3>(1)
+  const [methodologyVersion, setMethodologyVersion] = useState<1 | 2 | 3 | string>(1)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [showMethodologyModal, setShowMethodologyModal] = useState(false)
   const [selectedMethodology, setSelectedMethodology] = useState<string>("")
   const [selectedResultTitle, setSelectedResultTitle] = useState<string>("")
+  const [customMethodologies, setCustomMethodologies] = useState<string[]>([])
+  const [showCloneModal, setShowCloneModal] = useState(false)
+  const [cloneName, setCloneName] = useState("")
+  const [isCloning, setIsCloning] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [originalRules, setOriginalRules] = useState<Rule[]>([])
 
   const rulesToXML = (rulesArray: Rule[]): string => {
     const rulesXML = rulesArray
@@ -303,48 +318,28 @@ ${rulesXML}
     return ""
   }
 
-  // Function to get confidence level styling
-  const getConfidenceStyle = (confidence: string) => {
-    const confidenceNum = Number.parseFloat(confidence) * 100
-    if (confidenceNum >= 80) {
-      return {
-        color: "text-green-700",
-        bg: "bg-green-50",
-        border: "border-green-200",
-        icon: Star,
-      }
-    } else if (confidenceNum >= 60) {
-      return {
-        color: "text-blue-700",
-        bg: "bg-blue-50",
-        border: "border-blue-200",
-        icon: TrendingUp,
-      }
-    } else {
-      return {
-        color: "text-orange-700",
-        bg: "bg-orange-50",
-        border: "border-orange-200",
-        icon: AlertCircle,
-      }
-    }
-  }
-
-  // Function to extract domain from URL
-  const extractDomain = (url: string) => {
-    try {
-      const domain = new URL(url).hostname
-      return domain.replace("www.", "")
-    } catch {
-      return url
-    }
-  }
-
   // Function to handle methodology modal
   const openMethodologyModal = (methodology: string, title: string) => {
     setSelectedMethodology(methodology)
     setSelectedResultTitle(title)
     setShowMethodologyModal(true)
+  }
+
+  // Function to check if current methodology is custom
+  const isCustomMethodology = (version: string | number): boolean => {
+    return typeof version === "string" && !["1", "2", "3"].includes(version)
+  }
+
+  // Function to check for unsaved changes
+  const checkForUnsavedChanges = () => {
+    if (originalRules.length === 0) {
+      setHasUnsavedChanges(false)
+      return
+    }
+
+    const currentXML = rulesToXML(rules)
+    const originalXML = rulesToXML(originalRules)
+    setHasUnsavedChanges(currentXML !== originalXML)
   }
 
   const fetchSearchResults = async () => {
@@ -404,10 +399,18 @@ ${rulesXML}
     }
   }
 
-  const fetchMethodology = async (version: 1 | 2 | 3 = 1) => {
+  const fetchMethodology = async (version: 1 | 2 | 3 | string = 1) => {
     setIsMethodologyLoading(true)
     try {
-      const response = await fetch(`${baseUrl}/methodology?version=${version}`)
+      let response
+
+      if (typeof version === "string" && !["1", "2", "3"].includes(version)) {
+        // Custom methodology
+        response = await fetch(`${baseUrl}/methodology/custom/${encodeURIComponent(version)}`)
+      } else {
+        // Default methodology
+        response = await fetch(`${baseUrl}/methodology?version=${version}`)
+      }
 
       if (!response.ok) {
         throw new Error(`Error: ${response.status}`)
@@ -417,11 +420,135 @@ ${rulesXML}
       const parsedRules = parseXMLToRules(data)
       if (parsedRules.length > 0) {
         setRules(parsedRules)
+        setOriginalRules(parsedRules)
+        setHasUnsavedChanges(false)
       }
     } catch (err) {
       console.error("Failed to fetch methodology:", err)
+      setError(`Failed to load methodology: ${version}`)
     } finally {
       setIsMethodologyLoading(false)
+    }
+  }
+
+  const fetchCustomMethodologies = async () => {
+    try {
+      const response = await fetch(`${baseUrl}/methodology/custom`)
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`)
+      }
+      const data = await response.json()
+      setCustomMethodologies(data)
+    } catch (err) {
+      console.error("Failed to fetch custom methodologies:", err)
+    }
+  }
+
+  const saveCustomMethodology = async () => {
+    if (!isCustomMethodology(methodologyVersion)) {
+      setError("Cannot save a default methodology")
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const content = rulesToXML(rules)
+      const response = await fetch(
+        `${baseUrl}/methodology/custom/${encodeURIComponent(methodologyVersion as string)}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ content }),
+        },
+      )
+
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`)
+      }
+
+      setOriginalRules([...rules])
+      setHasUnsavedChanges(false)
+      setError("")
+    } catch (err) {
+      console.error("Failed to save methodology:", err)
+      setError("Failed to save methodology. Please try again.")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const cloneMethodology = async () => {
+    if (!cloneName.trim()) {
+      setError("Please enter a name for the cloned methodology")
+      return
+    }
+
+    setIsCloning(true)
+    try {
+      const content = rulesToXML(rules)
+      const response = await fetch(`${baseUrl}/methodology/save`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: cloneName.trim(),
+          content,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`)
+      }
+
+      // Refresh custom methodologies list
+      await fetchCustomMethodologies()
+
+      // Switch to the new methodology
+      setMethodologyVersion(cloneName.trim())
+      setOriginalRules([...rules])
+      setHasUnsavedChanges(false)
+
+      // Close modal and reset
+      setShowCloneModal(false)
+      setCloneName("")
+      setError("")
+    } catch (err) {
+      console.error("Failed to clone methodology:", err)
+      setError("Failed to clone methodology. Name might already exist.")
+    } finally {
+      setIsCloning(false)
+    }
+  }
+
+  const deleteCustomMethodology = async (name: string) => {
+    if (!confirm(`Are you sure you want to delete the methodology "${name}"? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      const response = await fetch(`${baseUrl}/methodology/custom/${encodeURIComponent(name)}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`)
+      }
+
+      // Refresh custom methodologies list
+      await fetchCustomMethodologies()
+
+      // If we're currently viewing the deleted methodology, switch to preset 1
+      if (methodologyVersion === name) {
+        setMethodologyVersion(1)
+      }
+
+      setError("")
+    } catch (err) {
+      console.error("Failed to delete methodology:", err)
+      setError("Failed to delete methodology. Please try again.")
     }
   }
 
@@ -602,16 +729,27 @@ ${rulesXML}
 
   const addRule = () => {
     setRules([...rules, { title: "", content: "" }])
+    checkForUnsavedChanges()
   }
 
   const removeRule = (index: number) => {
     setRules(rules.filter((_, i) => i !== index))
+    checkForUnsavedChanges()
   }
 
   const updateRule = (index: number, field: "title" | "content", value: string) => {
     const updatedRules = [...rules]
     updatedRules[index][field] = value
     setRules(updatedRules)
+
+    // Immediately check for unsaved changes after updating
+    setTimeout(() => {
+      if (originalRules.length > 0) {
+        const currentXML = rulesToXML(updatedRules)
+        const originalXML = rulesToXML(originalRules)
+        setHasUnsavedChanges(currentXML !== originalXML)
+      }
+    }, 0)
   }
 
   const handleGISSubmit = (e: React.FormEvent) => {
@@ -629,6 +767,7 @@ ${rulesXML}
     fetchAllResults()
     fetchMethodology(1) // Load version 1 by default
     fetchFiles()
+    fetchCustomMethodologies()
   }, [])
 
   useEffect(() => {
@@ -647,8 +786,17 @@ ${rulesXML}
       fetchAllResults()
     } else if (activeTab === "files") {
       fetchFiles()
+    } else if (activeTab === "methodology") {
+      fetchCustomMethodologies()
     }
   }, [activeTab])
+
+  // Remove this useEffect:
+  // useEffect(() => {
+  //   if (originalRules.length > 0) {
+  //     checkForUnsavedChanges()
+  //   }
+  // }, [rules, originalRules])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -992,6 +1140,12 @@ ${rulesXML}
                 <div>
                   <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-1">Search Methodology</h2>
                   <p className="text-gray-600">Configure search rules and parameters</p>
+                  {hasUnsavedChanges && isCustomMethodology(methodologyVersion) && (
+                    <p className="text-orange-600 text-sm mt-1 flex items-center gap-1">
+                      <Edit className="h-3 w-3" />
+                      You have unsaved changes
+                    </p>
+                  )}
                 </div>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                   <div className="text-sm text-gray-500 flex items-center">
@@ -1003,23 +1157,50 @@ ${rulesXML}
                     ) : (
                       <>
                         <Save className="h-3 w-3 mr-1" />
-                        Saved
+                        {hasUnsavedChanges ? "Unsaved" : "Saved"}
                       </>
                     )}
                   </div>
-                  <Button
-                    onClick={addRule}
-                    size="sm"
-                    className="bg-gray-900 hover:bg-gray-800 text-white w-full sm:w-auto"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add Rule
-                  </Button>
+                  <div className="flex gap-2 w-full sm:w-auto">
+                    <Button
+                      onClick={() => setShowCloneModal(true)}
+                      size="sm"
+                      variant="outline"
+                      className="border-gray-200 hover:bg-gray-50 flex-1 sm:flex-none"
+                    >
+                      <Copy className="h-4 w-4 mr-1" />
+                      Clone
+                    </Button>
+                    {isCustomMethodology(methodologyVersion) && (
+                      <Button
+                        onClick={saveCustomMethodology}
+                        disabled={isSaving || !hasUnsavedChanges}
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white flex-1 sm:flex-none"
+                      >
+                        {isSaving ? (
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        ) : (
+                          <Check className="h-4 w-4 mr-1" />
+                        )}
+                        Save Changes
+                      </Button>
+                    )}
+                    <Button
+                      onClick={addRule}
+                      size="sm"
+                      className="bg-gray-900 hover:bg-gray-800 text-white flex-1 sm:flex-none"
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Rule
+                    </Button>
+                  </div>
                 </div>
               </div>
 
               {/* Methodology Version Tabs */}
               <div className="flex flex-wrap gap-2">
+                {/* Default presets */}
                 {[1, 2, 3].map((version) => (
                   <Button
                     key={version}
@@ -1034,6 +1215,47 @@ ${rulesXML}
                   >
                     Preset {version}
                   </Button>
+                ))}
+
+                {/* Custom methodologies */}
+                {customMethodologies.map((name) => (
+                  <div key={name} className="relative group">
+                    <Button
+                      onClick={() => setMethodologyVersion(name)}
+                      variant={methodologyVersion === name ? "default" : "outline"}
+                      size="sm"
+                      className={`
+      ${methodologyVersion === name
+                          ? "bg-blue-600 hover:bg-blue-700 text-white"
+                          : "border-blue-200 hover:bg-blue-50 text-blue-700"
+                        }
+      transition-all duration-200 group-hover:pr-8
+    `}
+                    >
+                      {name}
+                      {hasUnsavedChanges && methodologyVersion === name && (
+                        <span className="ml-1 w-1.5 h-1.5 bg-orange-400 rounded-full"></span>
+                      )}
+                    </Button>
+
+                    <Button
+                      onClick={() => deleteCustomMethodology(name)}
+                      variant="ghost"
+                      size="sm"
+                      className="
+      absolute right-1 top-1/2 -translate-y-1/2 
+      h-6 w-6 p-0
+      text-gray-300 hover:text-red-500
+      opacity-0 group-hover:opacity-100
+      translate-x-2 group-hover:translate-x-0
+      transition-all duration-200 ease-out
+      bg-transparent hover:bg-transparent shadow-none
+    "
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+
                 ))}
               </div>
 
@@ -1119,6 +1341,51 @@ ${rulesXML}
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Clone Methodology Modal */}
+      <Dialog open={showCloneModal} onOpenChange={setShowCloneModal}>
+        <DialogContent className="max-w-md mx-4 sm:mx-auto">
+          <DialogHeader>
+            <DialogTitle className="text-gray-900 flex items-center gap-2">
+              <Copy className="h-5 w-5 text-blue-600" />
+              Clone Methodology
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-gray-600 mb-3">
+                Create a custom copy of the current methodology that you can edit and save.
+              </p>
+              <Input
+                value={cloneName}
+                onChange={(e) => setCloneName(e.target.value)}
+                placeholder="Enter name for cloned methodology..."
+                className="border-gray-200 focus:border-gray-900 focus:ring-gray-900"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowCloneModal(false)
+                  setCloneName("")
+                }}
+                className="border-gray-200 hover:bg-gray-50"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={cloneMethodology}
+                disabled={isCloning || !cloneName.trim()}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {isCloning ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Copy className="h-4 w-4 mr-1" />}
+                Clone
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Modals with mobile-friendly sizing */}
       <Dialog open={showUrlsModal} onOpenChange={setShowUrlsModal}>
@@ -1321,15 +1588,16 @@ ${rulesXML}
           <div className="overflow-y-auto max-h-[70vh]">
             <div className="p-4">
               <div className="bg-none rounded-lg p-4 overflow-x-auto">
-                <XMLViewer xml={selectedMethodology}
+                <XMLViewer
+                  xml={selectedMethodology}
                   indentSize={2}
                   // When the xml is invalid, invalidXml component will be displayed.
                   // Default: <div>Invalid XML!</div>
                   invalidXml={<div>Invalid XML!</div>}
-
                   // Displays line numbers on the left side when set to true.
                   // Default: false
-                  showLineNumbers={true} />
+                  showLineNumbers={true}
+                />
               </div>
             </div>
           </div>
@@ -1361,102 +1629,18 @@ ${rulesXML}
   )
 }
 
-function ResultCard({
-  result,
-  onDelete,
-  isDeleting,
-  onMethodologyClick,
-}: {
-  result: SearchResult
-  onDelete?: (url: string) => void
-  isDeleting?: boolean
-  onMethodologyClick?: (methodology: string, title: string) => void
-}) {
-  const confidenceStyle = getConfidenceStyle(result.confidence)
-  const ConfidenceIcon = confidenceStyle.icon
-  const confidencePercentage = Math.round(Number.parseFloat(result.confidence) * 100)
-  const domain = extractDomain(result.url)
-
-  return (
-    <div className="group p-4 border border-gray-200 rounded-lg hover:border-gray-300 hover:shadow-sm transition-all duration-200 relative bg-white">
-      {onDelete && (
-        <Button
-          onClick={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            onDelete(result.url)
-          }}
-          disabled={isDeleting}
-          variant="ghost"
-          size="sm"
-          className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-600 h-7 w-7 p-0 z-10"
-        >
-          {isDeleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
-        </Button>
-      )}
-
-      <div className="flex items-start gap-4 pr-8">
-        {/* Confidence Badge */}
-        <div
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${confidenceStyle.bg} ${confidenceStyle.border} border flex-shrink-0`}
-        >
-          <ConfidenceIcon className={`h-3.5 w-3.5 ${confidenceStyle.color}`} />
-          <span className={`text-sm font-medium ${confidenceStyle.color}`}>{confidencePercentage}%</span>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0 space-y-2">
-          {/* Title */}
-          <h3 className="font-semibold text-gray-900 leading-tight">
-            <a
-              href={result.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-blue-600 transition-colors break-words line-clamp-2"
-            >
-              {result.title}
-            </a>
-          </h3>
-
-          {/* URL and Domain */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-gray-100 rounded-sm flex items-center justify-center flex-shrink-0">
-                <LinkIcon className="h-2.5 w-2.5 text-gray-500" />
-              </div>
-              <span className="text-sm font-medium text-gray-700">{domain}</span>
-            </div>
-            <div className="text-xs text-gray-500 break-all sm:truncate">
-              {result.url.length > 80 ? `${result.url.substring(0, 80)}...` : result.url}
-            </div>
-          </div>
-
-          {/* Methodology Button */}
-          {result.methodology && onMethodologyClick && (
-            <div className="flex items-center gap-2 mt-2">
-              <Button
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  onMethodologyClick(result.methodology!, result.title)
-                }}
-                variant="ghost"
-                size="sm"
-                className="h-7 px-2 py-1 bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 transition-colors gap-1.5"
-              >
-                <Code className="h-3 w-3 text-gray-600" />
-                <span className="text-xs text-gray-700 font-medium">View Methodology</span>
-              </Button>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  )
+// Function to extract domain from URL
+const extractDomain = (url: string) => {
+  try {
+    const domain = new URL(url).hostname
+    return domain.replace("www.", "")
+  } catch {
+    return url
+  }
 }
 
-// Helper functions moved outside component
-function getConfidenceStyle(confidence: string) {
+// Function to get confidence level styling
+const getConfidenceStyle = (confidence: string) => {
   const confidenceNum = Number.parseFloat(confidence) * 100
   if (confidenceNum >= 80) {
     return {
@@ -1482,50 +1666,74 @@ function getConfidenceStyle(confidence: string) {
   }
 }
 
-function extractDomain(url: string) {
-  try {
-    const domain = new URL(url).hostname
-    return domain.replace("www.", "")
-  } catch {
-    return url
-  }
-}
+function ResultCard({
+  result,
+  onDelete,
+  isDeleting,
+  onMethodologyClick,
+}: {
+  result: SearchResult
+  onDelete?: (url: string) => void
+  isDeleting?: boolean
+  onMethodologyClick?: (methodology: string, title: string) => void
+}) {
+  const confidenceStyle = getConfidenceStyle(result.confidence)
+  const ConfidenceIcon = confidenceStyle.icon
+  const confidencePercentage = Math.round(Number.parseFloat(result.confidence) * 100)
 
-// Function to format XML for display
-function formatXMLForDisplay(xmlString: string): string {
-  if (!xmlString) return "No methodology available"
-
-  try {
-    // Add proper indentation and formatting
-    const formatted = xmlString.replace(/></g, ">\n<").replace(/^\s*\n/gm, "")
-
-    // Split into lines and add proper indentation
-    const lines = formatted.split("\n")
-    let indentLevel = 0
-    const indentSize = 2
-
-    const formattedLines = lines.map((line) => {
-      const trimmed = line.trim()
-      if (!trimmed) return ""
-
-      // Decrease indent for closing tags
-      if (trimmed.startsWith("</")) {
-        indentLevel = Math.max(0, indentLevel - 1)
-      }
-
-      const indentedLine = " ".repeat(indentLevel * indentSize) + trimmed
-
-      // Increase indent for opening tags (but not self-closing or closing tags)
-      if (trimmed.startsWith("<") && !trimmed.startsWith("</") && !trimmed.endsWith("/>")) {
-        indentLevel++
-      }
-
-      return indentedLine
-    })
-
-    return formattedLines.join("\n")
-  } catch (err) {
-    console.error("Error formatting XML:", err)
-    return xmlString
-  }
+  return (
+    <Card className="border-gray-200">
+      <CardHeader className="space-y-1">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base sm:text-lg font-semibold text-gray-900 break-words">{result.title}</CardTitle>
+          {onDelete && (
+            <Button
+              onClick={() => onDelete(result.url)}
+              disabled={isDeleting}
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 text-gray-400 hover:text-red-600"
+            >
+              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+            </Button>
+          )}
+        </div>
+        <CardDescription className="text-sm text-gray-500 break-words">
+          <Link href={result.url} target="_blank" className="hover:underline">
+            {extractDomain(result.url)}
+          </Link>
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-3">
+        <div className="flex items-center gap-2">
+          <Badge className={`${confidenceStyle.bg} ${confidenceStyle.color} ${confidenceStyle.border} text-xs`}>
+            <ConfidenceIcon className="h-3 w-3 mr-1" />
+            {confidencePercentage}% Confidence
+          </Badge>
+          {result.lang && (
+            <Badge variant="outline" className="text-xs">
+              {result.lang.toUpperCase()}
+            </Badge>
+          )}
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="text-xs text-gray-600 flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            Accessed on {new Date().toLocaleDateString()}
+          </div>
+          {onMethodologyClick && (
+            <Button
+              onClick={() => onMethodologyClick(result.methodology || "", result.title)}
+              variant="ghost"
+              size="sm"
+              className="gap-2"
+            >
+              <Code className="h-3 w-3" />
+              Methodology
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
 }
