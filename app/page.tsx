@@ -99,8 +99,8 @@ interface CustomMethodology {
   content?: string
 }
 
-const baseUrl = "https://s25api.millerding.com"
-// const baseUrl = "http://localhost:8000"
+// const baseUrl = "https://s25api.millerding.com"
+const baseUrl = "http://localhost:8000"
 
 export default function SearchDashboard() {
   const [query, setQuery] = useState("")
