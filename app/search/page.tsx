@@ -17,7 +17,7 @@ interface SearchResult {
 }
 
 const DEFAULT_METHODOLOGY =
-  "You will find articles about protest events, demonstrations, strikes, roadblocks, or anything related about the mining location."
+  "You will find articles about protest events, demonstrations, strikes, roadblocks, or anything related about the mining location. Use the domains olca.cl and EJatlas for your research."
 
 export default function Home() {
   const [query, setQuery] = useState("")
