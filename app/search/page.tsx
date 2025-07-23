@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Search, ExternalLink, Loader2, Circle, Settings, ChevronDown, ChevronUp } from "lucide-react"
+import { Search, ExternalLink, Loader2, Circle, Settings, ChevronDown, ChevronUp, BookOpen } from "lucide-react"
 
 interface SearchResult {
   url: string
@@ -19,6 +19,22 @@ interface SearchResult {
 const DEFAULT_METHODOLOGY =
   "You will find articles about protest events, demonstrations, strikes, roadblocks, or anything related about the mining location. Use the domains olca.cl and EJatlas for your research."
 
+const PRESETS = {
+  preset1:
+    `Goal: Search for protest events from local news agencies, journalists, and other relevant local articles related to this mine location.
+Relevance: Prioritize protests that are directly connected to the mine specified.
+Sources: Focus on these domains first. If there is not enough relevant information, open the search to more domains: https://noalamina.org/, https://olca.cl/oca/index.php, https://www.minesandcommunities.org/, ejatlas.org`,
+  preset2:
+    `Goal: Search for demands by individuals and civil society organizations on the courts and regulatory and administrative agencies of the state. This includes submitting legal complaints to the courts or bringing complaints to state regulatory agencies.
+Relevance: Prioritize articles describing lawsuits and other legal complaints directly affecting the mining project, mine location, or company owning the mine.
+Sources: Focus on articles and journals that clearly describe a legal complaint or lawsuit being filed.
+    `,
+  preset3:
+    `Goal: Search for institutional responses by the courts and regulatory and administrative agencies of the state to complaints by individuals and civil society organizations.
+Relevance: Prioritize articles describing government responses and actions related directly to protests, complaints, or other civil matters.
+Sources: Focus on articles and journals from official sources that clearly describe an official local government, agency, or court's response to complaints.`
+}
+
 export default function Home() {
   const [query, setQuery] = useState("")
   const [methodology, setMethodology] = useState(DEFAULT_METHODOLOGY)
@@ -26,7 +42,7 @@ export default function Home() {
   const [logs, setLogs] = useState<string[]>([])
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [isSearching, setIsSearching] = useState(false)
-  const eventSourceRef = useRef<EventSource | null>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
   const logsEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -69,58 +85,109 @@ export default function Home() {
     return null
   }
 
-  const startResearch = () => {
+  const startResearch = async () => {
     if (!query.trim()) return
 
     setLogs([])
     setSearchResults([])
     setIsSearching(true)
 
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close()
+    // Cancel any existing request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
     }
 
-    // Include both query and methodology in the API call
-    const encodedQuery = encodeURIComponent(query)
-    const encodedMethodology = encodeURIComponent(methodology)
+    // Create new abort controller for this request
+    const abortController = new AbortController()
+    abortControllerRef.current = abortController
 
-    const baseUrl = "https://s25api.millerding.com"
-    // const baseUrl = "http://localhost:8000"
+    try {
+      const baseUrl = "http://localhost:8000"
 
-    const source = new EventSource(
-      `${baseUrl}/stream?query=${encodedQuery}&methodology=${encodedMethodology}`,
-    )
-    eventSourceRef.current = source
+      const response = await fetch(`${baseUrl}/stream`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          query: query.trim(),
+          methodology: methodology.trim(),
+        }),
+        signal: abortController.signal,
+      })
 
-    source.onmessage = (event) => {
-      const logEntry = event.data
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
 
-      setLogs((prev) => {
-        const results = parseSearchResults(logEntry)
-        if (results) {
-          setSearchResults(results)
-          return [...prev, "✅ Received JSON response successfully"]
+      const reader = response.body?.getReader()
+      if (!reader) {
+        throw new Error("No response body reader available")
+      }
+
+      const decoder = new TextDecoder()
+
+      while (true) {
+        const { done, value } = await reader.read()
+
+        if (done) {
+          setIsSearching(false)
+          break
         }
 
-        return [...prev, logEntry]
-      })
-    }
+        // Decode the chunk and split by lines
+        const chunk = decoder.decode(value, { stream: true })
+        const lines = chunk.split("\n")
 
-    source.onerror = () => {
-      setLogs((prev) => [...prev, "Connection closed."])
-      setIsSearching(false)
-      source.close()
-    }
+        for (const line of lines) {
+          if (line.trim() === "") continue
 
-    source.addEventListener("close", () => {
+          // Handle Server-Sent Events format
+          let logEntry = line
+          if (line.startsWith("data: ")) {
+            logEntry = line.slice(6) // Remove 'data: ' prefix
+          }
+
+          if (logEntry.trim() === "") continue
+
+          setLogs((prev) => {
+            const results = parseSearchResults(logEntry)
+            if (results) {
+              setSearchResults(results)
+              return [...prev, "✅ Received JSON response successfully"]
+            }
+
+            return [...prev, logEntry]
+          })
+        }
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        setLogs((prev) => [...prev, "Request cancelled."])
+      } else {
+        setLogs((prev) => [...prev, `❌ Error: ${error instanceof Error ? error.message : "Unknown error"}`])
+      }
       setIsSearching(false)
-    })
+    }
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     startResearch()
   }
+
+  const handlePresetSelect = (presetKey: keyof typeof PRESETS) => {
+    setMethodology(PRESETS[presetKey])
+  }
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+    }
+  }, [])
 
   const getLogIcon = (log: string) => {
     if (log.includes("⏳")) return "⏳"
@@ -183,12 +250,12 @@ export default function Home() {
           {/* Methodology Editor - Smooth expand/collapse */}
           <div
             className={`overflow-hidden transition-all duration-300 ease-in-out ${
-              isMethodologyOpen ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
+              isMethodologyOpen ? "max-h-80 opacity-100" : "max-h-0 opacity-0"
             }`}
           >
             <Card className="border border-gray-200 shadow-none">
               <CardContent className="p-4">
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <label className="text-sm font-medium text-gray-700">Research Methodology</label>
                     <Button
@@ -201,11 +268,33 @@ export default function Home() {
                       Reset to default
                     </Button>
                   </div>
+
+                  {/* Preset Buttons */}
+                  <div className="flex gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 mr-4">
+                      <BookOpen className="w-4 h-4 text-gray-500" />
+                      <span className="text-sm text-gray-600">Quick presets:</span>
+                    </div>
+                    {Object.entries(PRESETS).map(([key, value], index) => (
+                      <Button
+                        key={key}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePresetSelect(key as keyof typeof PRESETS)}
+                        className="text-xs border-gray-300 hover:bg-gray-50 text-gray-700"
+                        disabled={isSearching}
+                      >
+                        Preset {index + 1}
+                      </Button>
+                    ))}
+                  </div>
+
                   <Textarea
                     value={methodology}
                     onChange={(e) => setMethodology(e.target.value)}
                     placeholder="Enter your research methodology..."
-                    className="min-h-[100px] text-sm border-gray-300 focus:border-gray-400 focus:ring-0 rounded-md resize-none"
+                    className="min-h-[120px] text-sm border-gray-300 focus:border-gray-400 focus:ring-0 rounded-md resize-none"
                     disabled={isSearching}
                   />
                   <div className="flex justify-end">
