@@ -19,6 +19,8 @@ interface SearchResult {
 const DEFAULT_METHODOLOGY =
   "You will find articles about protest events, demonstrations, strikes, roadblocks, or anything related about the mining location. Use the domains olca.cl and EJatlas for your research."
 
+const PRESET_CATEGORIES = ["Protest Events", "Institutional Demands", "Institutional Responses"]
+
 const PRESETS = {
   preset1:
     `Goal: Search for protest events from local news agencies, journalists, and other relevant local articles related to this mine location.
@@ -102,7 +104,8 @@ export default function Home() {
     abortControllerRef.current = abortController
 
     try {
-      const baseUrl = "http://localhost:8000"
+      // const baseUrl = "http://localhost:8000"
+      const baseUrl = "https://s25api.millerding.com"
 
       const response = await fetch(`${baseUrl}/stream`, {
         method: "POST",
@@ -285,7 +288,7 @@ export default function Home() {
                         className="text-xs border-gray-300 hover:bg-gray-50 text-gray-700"
                         disabled={isSearching}
                       >
-                        Preset {index + 1}
+                        {PRESET_CATEGORIES[index]}
                       </Button>
                     ))}
                   </div>
