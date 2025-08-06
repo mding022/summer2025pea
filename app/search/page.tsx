@@ -9,21 +9,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import {
-  Search,
-  ExternalLink,
-  Loader2,
-  Circle,
-  Settings,
-  ChevronDown,
-  ChevronUp,
-  BookOpen,
-  Database,
-  Trash2,
-  RefreshCw,
-  FileText,
-  List,
-} from "lucide-react"
+import { Search, ExternalLink, Loader2, Circle, Settings, ChevronDown, ChevronUp, BookOpen, Database, Trash2, RefreshCw, FileText, List, Plus, X } from 'lucide-react'
+
+// const BASE_URL = "http://localhost:8000"
+const BASE_URL = "https://s25api.millerding.com"
 
 interface SearchResult {
   url: string
@@ -44,28 +33,89 @@ interface CSVData {
   rows: string[][]
 }
 
-const DEFAULT_METHODOLOGY = `Goal: Search for protest events from local news agencies, journalists, and other relevant local articles related to this mine location.
-Relevance: Prioritize protests that are directly connected to the mine specified.
-Sources: Focus on these domains first. If there is not enough relevant information, open the search to more domains: https://noalamina.org/, https://olca.cl/oca/index.php, https://www.minesandcommunities.org/, ejatlas.org`
+interface Rule {
+  id: string
+  title: string
+  content: string
+}
+
+const DEFAULT_METHODOLOGY_RULES: Rule[] = [
+  {
+    id: "1",
+    title: "Goal",
+    content: "Search for protest events from local news agencies, journalists, and other relevant local articles related to this mine location."
+  },
+  {
+    id: "2", 
+    title: "Relevance",
+    content: "Prioritize protests that are directly connected to the mine specified."
+  },
+  {
+    id: "3",
+    title: "Sources",
+    content: "Focus on these domains first. If there is not enough relevant information, open the search to more domains: https://noalamina.org/, https://olca.cl/oca/index.php, https://www.minesandcommunities.org/, ejatlas.org"
+  }
+]
 
 const PRESET_CATEGORIES = ["Protest Events", "Institutional Demands", "Institutional Responses"]
 
 const PRESETS = {
-  preset1: `Goal: Search for protest events from local news agencies, journalists, and other relevant local articles related to this mine location.
-Relevance: Prioritize protests that are directly connected to the mine specified.
-Sources: Focus on these domains first. If there is not enough relevant information, open the search to more domains: https://noalamina.org/, https://olca.cl/oca/index.php, https://www.minesandcommunities.org/, ejatlas.org`,
-  preset2: `Goal: Search for demands by individuals and civil society organizations on the courts and regulatory and administrative agencies of the state. This includes submitting legal complaints to the courts or bringing complaints to state regulatory agencies.
-Relevance: Prioritize articles describing lawsuits and other legal complaints directly affecting the mining project, mine location, or company owning the mine.
-Sources: Focus on articles and journals that clearly describe a legal complaint or lawsuit being filed.
-    `,
-  preset3: `Goal: Search for institutional responses by the courts and regulatory and administrative agencies of the state to complaints by individuals and civil society organizations.
-Relevance: Prioritize articles describing government responses and actions related directly to protests, complaints, or other civil matters.
-Sources: Focus on articles and journals from official sources that clearly describe an official local government, agency, or court's response to complaints.`,
+  preset1: [
+    {
+      id: "1",
+      title: "Goal",
+      content: "Search for protest events from local news agencies, journalists, and other relevant local articles related to this mine location."
+    },
+    {
+      id: "2", 
+      title: "Relevance",
+      content: "Prioritize protests that are directly connected to the mine specified."
+    },
+    {
+      id: "3",
+      title: "Sources",
+      content: "Focus on these domains first. If there is not enough relevant information, open the search to more domains: https://noalamina.org/, https://olca.cl/oca/index.php, https://www.minesandcommunities.org/, ejatlas.org"
+    }
+  ],
+  preset2: [
+    {
+      id: "1",
+      title: "Goal",
+      content: "Search for demands by individuals and civil society organizations on the courts and regulatory and administrative agencies of the state. This includes submitting legal complaints to the courts or bringing complaints to state regulatory agencies."
+    },
+    {
+      id: "2",
+      title: "Relevance", 
+      content: "Prioritize articles describing lawsuits and other legal complaints directly affecting the mining project, mine location, or company owning the mine."
+    },
+    {
+      id: "3",
+      title: "Sources",
+      content: "Focus on articles and journals that clearly describe a legal complaint or lawsuit being filed."
+    }
+  ],
+  preset3: [
+    {
+      id: "1",
+      title: "Goal",
+      content: "Search for institutional responses by the courts and regulatory and administrative agencies of the state to complaints by individuals and civil society organizations."
+    },
+    {
+      id: "2",
+      title: "Relevance",
+      content: "Prioritize articles describing government responses and actions related directly to protests, complaints, or other civil matters."
+    },
+    {
+      id: "3",
+      title: "Sources", 
+      content: "Focus on articles and journals from official sources that clearly describe an official local government, agency, or court's response to complaints."
+    }
+  ]
 }
 
 export default function Home() {
   const [query, setQuery] = useState("")
-  const [methodology, setMethodology] = useState(DEFAULT_METHODOLOGY)
+  const [methodologyRules, setMethodologyRules] = useState<Rule[]>(DEFAULT_METHODOLOGY_RULES)
   const [isMethodologyOpen, setIsMethodologyOpen] = useState(false)
   const [isDatabaseOpen, setIsDatabaseOpen] = useState(false)
   const [logs, setLogs] = useState<string[]>([])
@@ -144,8 +194,8 @@ export default function Home() {
         parsed = JSON.parse(rawJson)
       } catch {
         const cleaned = rawJson
-          .replace(/^```json/, "")
-          .replace(/```$/, "")
+          .replace(/^\`\`\`json/, "")
+          .replace(/\`\`\`$/, "")
           .replace(/^"|"$/g, "")
           .replace(/\\"/g, '"')
           .replace(/\\n/g, "\n")
@@ -163,10 +213,22 @@ export default function Home() {
     return null
   }
 
+  const convertRulesToXML = (rules: Rule[]): string => {
+    let xml = "<methodology>\n"
+    rules.forEach(rule => {
+      xml += `  <rule id="${rule.id}">\n`
+      xml += `    <title>${rule.title}</title>\n`
+      xml += `    <content>${rule.content}</content>\n`
+      xml += `  </rule>\n`
+    })
+    xml += "</methodology>"
+    return xml
+  }
+
   const fetchAllResults = async () => {
     setIsLoadingDatabase(true)
     try {
-      const baseUrl = "https://s25api.millerding.com"
+      const baseUrl = BASE_URL
       const response = await fetch(`${baseUrl}/all-search-results`)
 
       if (!response.ok) {
@@ -184,7 +246,7 @@ export default function Home() {
 
   const removeResult = async (resultId: number) => {
     try {
-      const baseUrl = "https://s25api.millerding.com"
+      const baseUrl = BASE_URL
       const response = await fetch(`${baseUrl}/remove/${resultId}`, {
         method: "DELETE",
       })
@@ -202,7 +264,7 @@ export default function Home() {
   const processDatabase = async () => {
     setIsProcessing(true)
     try {
-      const baseUrl = "https://s25api.millerding.com"
+      const baseUrl = BASE_URL
       const response = await fetch(`${baseUrl}/process`, {
         method: "POST",
         headers: {
@@ -226,7 +288,7 @@ export default function Home() {
   const fetchCSVData = async () => {
     setIsLoadingCSV(true)
     try {
-      const baseUrl = "https://s25api.millerding.com"
+      const baseUrl = BASE_URL
       const response = await fetch(`${baseUrl}/resultscsv`)
 
       if (!response.ok) {
@@ -256,7 +318,9 @@ export default function Home() {
 
     setIsBatchProcessing(true)
     try {
-      const baseUrl = "https://s25api.millerding.com"
+      const baseUrl = BASE_URL
+      const methodologyXML = convertRulesToXML(methodologyRules)
+      
       const response = await fetch(`${baseUrl}/batch`, {
         method: "POST",
         headers: {
@@ -264,7 +328,7 @@ export default function Home() {
         },
         body: JSON.stringify({
           queries: queries,
-          methodology: methodology.trim(),
+          methodology: methodologyXML,
         }),
       })
 
@@ -301,7 +365,8 @@ export default function Home() {
     abortControllerRef.current = abortController
 
     try {
-      const baseUrl = "https://s25api.millerding.com"
+      const baseUrl = BASE_URL
+      const methodologyXML = convertRulesToXML(methodologyRules)
 
       const response = await fetch(`${baseUrl}/stream`, {
         method: "POST",
@@ -310,7 +375,7 @@ export default function Home() {
         },
         body: JSON.stringify({
           query: query.trim(),
-          methodology: methodology.trim(),
+          methodology: methodologyXML,
         }),
         signal: abortController.signal,
       })
@@ -374,7 +439,7 @@ export default function Home() {
   }
 
   const handlePresetSelect = (presetKey: keyof typeof PRESETS) => {
-    setMethodology(PRESETS[presetKey])
+    setMethodologyRules(PRESETS[presetKey])
   }
 
   const handleDatabaseToggle = () => {
@@ -382,6 +447,25 @@ export default function Home() {
     if (!isDatabaseOpen && databaseResults.length === 0) {
       fetchAllResults()
     }
+  }
+
+  const addRule = () => {
+    const newId = (Math.max(...methodologyRules.map(r => parseInt(r.id)), 0) + 1).toString()
+    setMethodologyRules([...methodologyRules, { id: newId, title: "", content: "" }])
+  }
+
+  const removeRule = (id: string) => {
+    setMethodologyRules(methodologyRules.filter(rule => rule.id !== id))
+  }
+
+  const updateRule = (id: string, field: 'title' | 'content', value: string) => {
+    setMethodologyRules(methodologyRules.map(rule => 
+      rule.id === id ? { ...rule, [field]: value } : rule
+    ))
+  }
+
+  const resetToDefault = () => {
+    setMethodologyRules(DEFAULT_METHODOLOGY_RULES)
   }
 
   useEffect(() => {
@@ -415,7 +499,7 @@ export default function Home() {
     setManualAddResult(null)
 
     try {
-      const baseUrl = "https://s25api.millerding.com"
+      const baseUrl = BASE_URL
       const response = await fetch(`${baseUrl}/add_manual_result`, {
         method: "POST",
         headers: {
@@ -839,26 +923,38 @@ antamina community opposition`}
             </Button>
           </form>
 
-          {/* Methodology Editor - Smooth expand/collapse */}
+          {/* Methodology Editor - Rule-based XML system */}
           <div
             className={`overflow-hidden transition-all duration-300 ease-in-out ${
-              isMethodologyOpen ? "max-h-80 opacity-100" : "max-h-0 opacity-0"
+              isMethodologyOpen ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
             }`}
           >
             <Card className="border border-gray-200 shadow-none">
               <CardContent className="p-4">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-gray-700">Research Methodology</label>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setMethodology(DEFAULT_METHODOLOGY)}
-                      className="text-xs text-gray-500 hover:text-gray-700 h-auto p-1"
-                    >
-                      Reset to default
-                    </Button>
+                    <label className="text-sm font-medium text-gray-700">Research Methodology Rules</label>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={resetToDefault}
+                        className="text-xs text-gray-500 hover:text-gray-700 h-auto p-1"
+                      >
+                        Reset to default
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={addRule}
+                        className="text-xs border-gray-300 hover:bg-gray-50 text-gray-700 h-auto px-2 py-1"
+                      >
+                        <Plus className="w-3 h-3 mr-1" />
+                        Add Rule
+                      </Button>
+                    </div>
                   </div>
 
                   {/* Preset Buttons */}
@@ -882,13 +978,44 @@ antamina community opposition`}
                     ))}
                   </div>
 
-                  <Textarea
-                    value={methodology}
-                    onChange={(e) => setMethodology(e.target.value)}
-                    placeholder="Enter your research methodology..."
-                    className="min-h-[120px] text-sm border-gray-300 focus:border-gray-400 focus:ring-0 rounded-md resize-none"
-                    disabled={isSearching}
-                  />
+                  {/* Rules Editor */}
+                  <div className="space-y-3 max-h-80 overflow-y-auto">
+                    {methodologyRules.map((rule) => (
+                      <div key={rule.id} className="border border-gray-200 rounded-md p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-gray-700">Rule {rule.id}</span>
+                          {methodologyRules.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeRule(rule.id)}
+                              className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <X className="w-3 h-3" />
+                            </Button>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <Input
+                            placeholder="Rule title (e.g., Goal, Relevance, Sources)"
+                            value={rule.title}
+                            onChange={(e) => updateRule(rule.id, 'title', e.target.value)}
+                            className="text-sm border-gray-300 focus:border-gray-400 focus:ring-0 rounded-md"
+                            disabled={isSearching}
+                          />
+                          <Textarea
+                            placeholder="Rule content..."
+                            value={rule.content}
+                            onChange={(e) => updateRule(rule.id, 'content', e.target.value)}
+                            className="min-h-[60px] text-sm border-gray-300 focus:border-gray-400 focus:ring-0 rounded-md resize-none"
+                            disabled={isSearching}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
                   <div className="flex justify-end">
                     <Button
                       type="button"
