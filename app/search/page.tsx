@@ -46,7 +46,7 @@ const DEFAULT_METHODOLOGY_RULES: Rule[] = [
     content: "Search for protest events from local news agencies, journalists, and other relevant local articles related to this mine location."
   },
   {
-    id: "2", 
+    id: "2",
     title: "Relevance",
     content: "Prioritize protests that are directly connected to the mine specified."
   },
@@ -61,21 +61,31 @@ const PRESET_CATEGORIES = ["Protest Events", "Institutional Demands", "Instituti
 
 const PRESETS = {
   preset1: [
-    {
-      id: "1",
-      title: "Goal",
-      content: "Search for protest events from local news agencies, journalists, and other relevant local articles related to this mine location."
-    },
-    {
-      id: "2", 
-      title: "Relevance",
-      content: "Prioritize protests that are directly connected to the mine specified."
-    },
-    {
-      id: "3",
-      title: "Sources",
-      content: "Focus on these domains first. If there is not enough relevant information, open the search to more domains: https://noalamina.org/, https://olca.cl/oca/index.php, https://www.minesandcommunities.org/, ejatlas.org"
-    }
+      {
+        "id": "1",
+        "title": "Methodology",
+        "content": "Search for protest events. A protest event is a public political action by a group of people who make demands on authorities such as companies, political actors and the state."
+      },
+      {
+        "id": "2",
+        "title": "Countries to Search In",
+        "content": "**CRITICAL**: You must only search for content related to Argentina, Chile, and Peru."
+      },
+      {
+        "id": "3",
+        "title": "**CRITICAL** Related Industries",
+        "content": "Limit the search to protest events against mining companies and mining projects. Do not include oil and gas projects in the search."
+      },
+      {
+        "id": "5",
+        "title": "Whitelisted Sources",
+        "content": "Search for results on these websites first, by using multiple OR statements. The domains are:\nhttps://www.lanacion.com.ar/\nhttps://www.clarin.com/\nhttps://www.larazon.es/\nhttps://www.cronista.com/\nhttps://www.diariouno.com.ar/\nhttps://www.diarioregistrado.com/\nhttps://www.minutouno.com/\nhttp://www.nochepolar.com/\nhttps://www.ambito.com/\nhttps://noticiasargentinas.com/\nhttps://www.perfil.com/\nhttps://www.pagina12.com.ar/\nhttps://www.lacuarta.com/temas/argentina/\nhttps://elsigloweb.com/\nhttps://www.lun.com/\nhttps://www.elancasti.com.ar/\nhttps://www.elesquiu.com/\nhttps://www.diariodecuyo.com.ar/\nhttps://www.tiempodesanjuan.com/\nhttps://www.tiemposur.com.ar/\nhttps://www.eltribuno.com/\nhttps://www.anred.org/\nhttps://palpalainforma.com/\nhttps://www.copenoa.com.ar/\nhttps://latinta.com.ar/\nhttps://elresaltador.com.ar/\nhttps://enredaccion.com.ar/\nhttps://argentina.indymedia.org/\nhttps://periodicas.com.ar/\nhttps://www.tiempoar.com.ar/\nhttps://suresnoticias.com.ar/\nhttps://www.cordobatimes.com/\nhttps://www.ocmal.org/\nhttps://ejatlas.org/\nhttps://olca.cl/oca/index.php\nhttps://www.minesandcommunities.org/\nhttps://www.redlatinoamericanademujeres.org/\nhttps://www.aomaosam.org.ar/aoma/\nhttps://www.argentina.gob.ar/justicia/institucional\nhttps://www.argentina.gob.ar/capital-humano/trabajo\nhttps://noalamina.org/\nhttps://concienciasolidaria.org.ar/es/\nhttps://asambleasdecomunidades.org.ar/\nhttps://miningpress.com/\nhttps://enernews.com/\nhttps://www.panorama-minero.com\nhttps://huellaminera.com/\nhttps://www.mining.com/\nhttps://www.mining-journal.com/\nhttps://im-mining.com/\nhttps://www.mch.cl/\nhttps://energiminas.com/\nhttps://www.portalminero.com/\nhttps://www.bnamericas.com/"
+      },
+      {
+        "id": "6",
+        "title": "Time Period",
+        "content": "Only search for content related to events that occurred within the time period of 2002 to 2019."
+      }
   ],
   preset2: [
     {
@@ -85,7 +95,7 @@ const PRESETS = {
     },
     {
       id: "2",
-      title: "Relevance", 
+      title: "Relevance",
       content: "Prioritize articles describing lawsuits and other legal complaints directly affecting the mining project, mine location, or company owning the mine."
     },
     {
@@ -107,7 +117,7 @@ const PRESETS = {
     },
     {
       id: "3",
-      title: "Sources", 
+      title: "Sources",
       content: "Focus on articles and journals from official sources that clearly describe an official local government, agency, or court's response to complaints."
     }
   ]
@@ -320,7 +330,7 @@ export default function Home() {
     try {
       const baseUrl = BASE_URL
       const methodologyXML = convertRulesToXML(methodologyRules)
-      
+
       const response = await fetch(`${baseUrl}/batch`, {
         method: "POST",
         headers: {
@@ -459,7 +469,7 @@ export default function Home() {
   }
 
   const updateRule = (id: string, field: 'title' | 'content', value: string) => {
-    setMethodologyRules(methodologyRules.map(rule => 
+    setMethodologyRules(methodologyRules.map(rule =>
       rule.id === id ? { ...rule, [field]: value } : rule
     ))
   }
@@ -557,9 +567,8 @@ export default function Home() {
 
         {/* Database Results Section */}
         <div
-          className={`overflow-hidden transition-all duration-300 ease-in-out mb-8 ${
-            isDatabaseOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
-          }`}
+          className={`overflow-hidden transition-all duration-300 ease-in-out mb-8 ${isDatabaseOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+            }`}
         >
           <Card className="border border-gray-200 shadow-none">
             <CardHeader className="pb-3">
@@ -775,11 +784,10 @@ export default function Home() {
 
               {manualAddResult && (
                 <div
-                  className={`p-3 rounded-md text-sm ${
-                    manualAddResult.message.includes("Error")
+                  className={`p-3 rounded-md text-sm ${manualAddResult.message.includes("Error")
                       ? "bg-red-50 text-red-700 border border-red-200"
                       : "bg-green-50 text-green-700 border border-green-200"
-                  }`}
+                    }`}
                 >
                   <div className="font-medium mb-1">{manualAddResult.message}</div>
                   {manualAddResult.result && (
@@ -925,9 +933,8 @@ antamina community opposition`}
 
           {/* Methodology Editor - Rule-based XML system */}
           <div
-            className={`overflow-hidden transition-all duration-300 ease-in-out ${
-              isMethodologyOpen ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
-            }`}
+            className={`overflow-hidden transition-all duration-300 ease-in-out ${isMethodologyOpen ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
+              }`}
           >
             <Card className="border border-gray-200 shadow-none">
               <CardContent className="p-4">
