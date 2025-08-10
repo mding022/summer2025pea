@@ -9,7 +9,25 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Search, ExternalLink, Loader2, Circle, Settings, ChevronDown, ChevronUp, BookOpen, Database, Trash2, RefreshCw, FileText, List, Plus, X } from 'lucide-react'
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Search,
+  ExternalLink,
+  Loader2,
+  Circle,
+  Settings,
+  ChevronDown,
+  ChevronUp,
+  BookOpen,
+  Database,
+  Trash2,
+  RefreshCw,
+  FileText,
+  List,
+  Plus,
+  X,
+  Globe,
+} from "lucide-react"
 
 // const BASE_URL = "http://localhost:8000"
 const BASE_URL = "https://s25api.millerding.com"
@@ -43,85 +61,124 @@ const DEFAULT_METHODOLOGY_RULES: Rule[] = [
   {
     id: "1",
     title: "Goal",
-    content: "Search for protest events from local news agencies, journalists, and other relevant local articles related to this mine location."
+    content:
+      "Search for protest events from local news agencies, journalists, and other relevant local articles related to this mine location.",
   },
   {
     id: "2",
     title: "Relevance",
-    content: "Prioritize protests that are directly connected to the mine specified."
+    content: "Prioritize protests that are directly connected to the mine specified.",
   },
   {
     id: "3",
     title: "Sources",
-    content: "Focus on these domains first. If there is not enough relevant information, open the search to more domains: https://noalamina.org/, https://olca.cl/oca/index.php, https://www.minesandcommunities.org/, ejatlas.org"
-  }
+    content:
+      "Focus on these domains first. If there is not enough relevant information, open the search to more domains: https://noalamina.org/, https://olca.cl/oca/index.php, https://www.minesandcommunities.org/, ejatlas.org",
+  },
 ]
 
 const PRESET_CATEGORIES = ["Protest Events", "Institutional Demands", "Institutional Responses"]
 
 const PRESETS = {
   preset1: [
-      {
-        "id": "1",
-        "title": "Methodology",
-        "content": "Search for protest events. A protest event is a public political action by a group of people who make demands on authorities such as companies, political actors and the state."
-      },
-      {
-        "id": "2",
-        "title": "Countries to Search In",
-        "content": "**CRITICAL**: You must only search for content related to Argentina, Chile, and Peru."
-      },
-      {
-        "id": "3",
-        "title": "**CRITICAL** Related Industries",
-        "content": "Limit the search to protest events against mining companies and mining projects. Do not include oil and gas projects in the search."
-      },
-      {
-        "id": "5",
-        "title": "Whitelisted Sources",
-        "content": "Search for results on these websites first, by using multiple OR statements. The domains are:\nhttps://www.lanacion.com.ar/\nhttps://www.clarin.com/\nhttps://www.larazon.es/\nhttps://www.cronista.com/\nhttps://www.diariouno.com.ar/\nhttps://www.diarioregistrado.com/\nhttps://www.minutouno.com/\nhttp://www.nochepolar.com/\nhttps://www.ambito.com/\nhttps://noticiasargentinas.com/\nhttps://www.perfil.com/\nhttps://www.pagina12.com.ar/\nhttps://www.lacuarta.com/temas/argentina/\nhttps://elsigloweb.com/\nhttps://www.lun.com/\nhttps://www.elancasti.com.ar/\nhttps://www.elesquiu.com/\nhttps://www.diariodecuyo.com.ar/\nhttps://www.tiempodesanjuan.com/\nhttps://www.tiemposur.com.ar/\nhttps://www.eltribuno.com/\nhttps://www.anred.org/\nhttps://palpalainforma.com/\nhttps://www.copenoa.com.ar/\nhttps://latinta.com.ar/\nhttps://elresaltador.com.ar/\nhttps://enredaccion.com.ar/\nhttps://argentina.indymedia.org/\nhttps://periodicas.com.ar/\nhttps://www.tiempoar.com.ar/\nhttps://suresnoticias.com.ar/\nhttps://www.cordobatimes.com/\nhttps://www.ocmal.org/\nhttps://ejatlas.org/\nhttps://olca.cl/oca/index.php\nhttps://www.minesandcommunities.org/\nhttps://www.redlatinoamericanademujeres.org/\nhttps://www.aomaosam.org.ar/aoma/\nhttps://www.argentina.gob.ar/justicia/institucional\nhttps://www.argentina.gob.ar/capital-humano/trabajo\nhttps://noalamina.org/\nhttps://concienciasolidaria.org.ar/es/\nhttps://asambleasdecomunidades.org.ar/\nhttps://miningpress.com/\nhttps://enernews.com/\nhttps://www.panorama-minero.com\nhttps://huellaminera.com/\nhttps://www.mining.com/\nhttps://www.mining-journal.com/\nhttps://im-mining.com/\nhttps://www.mch.cl/\nhttps://energiminas.com/\nhttps://www.portalminero.com/\nhttps://www.bnamericas.com/"
-      },
-      {
-        "id": "6",
-        "title": "Time Period",
-        "content": "Only search for content related to events that occurred within the time period of 2002 to 2019."
-      }
+    {
+      id: "1",
+      title: "Methodology",
+      content:
+        "Search for protest events. A protest event is a public political action by a group of people who make demands on authorities such as companies, political actors and the state.",
+    },
+    {
+      id: "2",
+      title: "Countries to Search In",
+      content: "**CRITICAL**: You must only search for content related to Argentina, Chile, and Peru.",
+    },
+    {
+      id: "3",
+      title: "**CRITICAL** Related Industries",
+      content:
+        "Limit the search to protest events against mining companies and mining projects. Do not include oil and gas projects in the search.",
+    },
+    {
+      id: "5",
+      title: "Whitelisted Sources",
+      content:
+        "Search for results on these websites first, by using multiple OR statements. The domains are:\nhttps://www.lanacion.com.ar/\nhttps://www.clarin.com/\nhttps://www.larazon.es/\nhttps://www.cronista.com/\nhttps://www.diariouno.com.ar/\nhttps://www.diarioregistrado.com/\nhttps://www.minutouno.com/\nhttp://www.nochepolar.com/\nhttps://www.ambito.com/\nhttps://noticiasargentinas.com/\nhttps://www.perfil.com/\nhttps://www.pagina12.com.ar/\nhttps://www.lacuarta.com/temas/argentina/\nhttps://elsigloweb.com/\nhttps://www.lun.com/\nhttps://www.elancasti.com.ar/\nhttps://www.elesquiu.com/\nhttps://www.diariodecuyo.com.ar/\nhttps://www.tiempodesanjuan.com/\nhttps://www.tiemposur.com.ar/\nhttps://www.eltribuno.com/\nhttps://www.anred.org/\nhttps://palpalainforma.com/\nhttps://www.copenoa.com.ar/\nhttps://latinta.com.ar/\nhttps://elresaltador.com.ar/\nhttps://enredaccion.com.ar/\nhttps://argentina.indymedia.org/\nhttps://periodicas.com.ar/\nhttps://www.tiempoar.com.ar/\nhttps://suresnoticias.com.ar/\nhttps://www.cordobatimes.com/\nhttps://www.ocmal.org/\nhttps://ejatlas.org/\nhttps://olca.cl/oca/index.php\nhttps://www.minesandcommunities.org/\nhttps://www.redlatinoamericanademujeres.org/\nhttps://www.aomaosam.org.ar/aoma/\nhttps://www.argentina.gob.ar/justicia/institucional\nhttps://www.argentina.gob.ar/capital-humano/trabajo\nhttps://noalamina.org/\nhttps://concienciasolidaria.org.ar/es/\nhttps://asambleasdecomunidades.org.ar/\nhttps://miningpress.com/\nhttps://enernews.com/\nhttps://www.panorama-minero.com\nhttps://huellaminera.com/\nhttps://www.mining.com/\nhttps://www.mining-journal.com/\nhttps://im-mining.com/\nhttps://www.mch.cl/\nhttps://energiminas.com/\nhttps://www.portalminero.com/\nhttps://www.bnamericas.com/",
+    },
+    {
+      id: "6",
+      title: "Time Period",
+      content: "Only search for content related to events that occurred within the time period of 2002 to 2019.",
+    },
   ],
   preset2: [
     {
       id: "1",
-      title: "Goal",
-      content: "Search for demands by individuals and civil society organizations on the courts and regulatory and administrative agencies of the state. This includes submitting legal complaints to the courts or bringing complaints to state regulatory agencies."
+      title: "Methodology",
+      content:
+        "Search for demands by individuals and civil society organizations on the courts and regulatory and administrative agencies of the state. This includes submitting legal complaints to the courts or bringing complaints to state regulatory agencies.",
     },
     {
       id: "2",
-      title: "Relevance",
-      content: "Prioritize articles describing lawsuits and other legal complaints directly affecting the mining project, mine location, or company owning the mine."
+      title: "Countries to Search In",
+      content: "**CRITICAL**: You must only search for content related to Argentina, Chile, and Peru.",
     },
     {
       id: "3",
-      title: "Sources",
-      content: "Focus on articles and journals that clearly describe a legal complaint or lawsuit being filed."
-    }
+      title: "**CRITICAL** Related Industries",
+      content:
+        "Limit the search to demands or complaints against mining companies and mining projects. Do not include oil and gas projects in the search.",
+    },
+    {
+      id: "4",
+      title: "Keywords to Search For",
+      content:
+        "Keywords describing complaints include: claim / demand / accusation (denuncia); regulatory claim (denuncia ante las autoridades / reclamación ante las autoridades); formal claim (reclamo formal / presentación ante autoridades); queja (complaint); claim of pollution (denuncia de contaminación); claim of spill (denuncia de derrame); environmental crime (delito ambiental).\n\nKeywords describing legal complaints include: violation of rights (violación de derechos); abuse of rights (abuso de derechos); lack of respect for rights (falta de respeto por los derechos); right to prior consultation (derecho a la consulta previa); right to water (derecho al agua); right to a clean environment (derecho a un medio ambiente limpio); protection (amparo); constitutional protection appeal (recurso de amparo); judicial submission (demanda judicial / querella); criminal complaint (denuncia penal); precautionary measure (cautelar / medida cautelar); appeal for unconstitutionality (recurso de inconstitucionalidad); appeal (recurso de apelación / revisión / casación); class action (acción colectiva); strategic litigation (litigio estratégico); judicial presentation (presentación judicial); petition (petición); counterclaim (reconvención); legal remedy (recurso); motion for clarification (recurso de aclaración); administrative appeal (recurso de alzada); motion for reconsideration (recurso de reposición); appeal for reconsideration (recurso de súplica); demand (requerimiento); litigation (pleito); question (interpelación).",
+    },
+    {
+      id: "5",
+      title: "Time Period",
+      content: "Only search for demands or complaints that occurred within the time period of 2002 to 2019.",
+    },
   ],
   preset3: [
     {
       id: "1",
-      title: "Goal",
-      content: "Search for institutional responses by the courts and regulatory and administrative agencies of the state to complaints by individuals and civil society organizations."
+      title: "Methodology",
+      content:
+        "Search for institutional responses by the courts and regulatory and administrative agencies of the state to complaints by individuals and civil society organizations.",
     },
     {
       id: "2",
-      title: "Relevance",
-      content: "Prioritize articles describing government responses and actions related directly to protests, complaints, or other civil matters."
+      title: "Countries to Search In",
+      content: "**CRITICAL**: You must only search for content related to Argentina, Chile, and Peru.",
     },
     {
       id: "3",
-      title: "Sources",
-      content: "Focus on articles and journals from official sources that clearly describe an official local government, agency, or court's response to complaints."
-    }
-  ]
+      title: "**CRITICAL** Related Industries",
+      content:
+        "Limit the search to institutional responses that affect mining companies. Do not include oil and gas projects in the search.",
+    },
+    {
+      id: "4",
+      title: "Keywords to Search For",
+      content:
+        "Keywords describing institutional responses by regulatory agencies include: environmental inspection (inspección ambiental); mitigation (mitigación); pasivo ambiental (environmental liability); plan de contingencia (contingency plan); environmental audit (auditoría ambiental); final disposition (disposición final); monitoring (monitoreo); certificate (acta / resolución); administrative act (acto administrativo); arbitration (arbitraje); public consultation (audiencia pública / consulta pública); workshop (mesa de trabajo); encumbrance / charge (gravamen); fine (multa); restoration (restauración); environmental clean-up (saneamiento ambiental); revocation of environmental licence (revocación de licencia ambiental / revocación de resolución de calificación ambiental); formulation of charges (formulación de cargos); compliance program (programa de cumplimiento); contaminants criteria (contaminantes criterio); environmental monitoring (fiscalización ambiental); temporary measures (medidas providenciales); self-reporting (autodenuncia); noncompliance (incumplimiento); mining protection (amparo minero); environmental certificate (certificación ambiental); environmental management audit (auditoría de gestión ambiental); polluted area (zona saturada).\n\nKeywords describing institutional responses by the courts include: arbitration award (laudo); nullity of proceedings (nulidad de actuaciones); invitation to take legal action (ofrecimiento de acciones); enabling (habilitación); preliminary ruling (prejudicial); prescription (prescripción); breach (quebramiento); breach of sentence (quebramiento de condena); procedural irregularity / breach of procedure (quebramiento de forma); cessation (casación); precautionary measure (medida cautelar); withdrawal (desistimiento); decree (decreto); edict (edicto); ruling (fallo); final ruling / final judgement (firme).",
+    },
+    {
+      id: "5",
+      title: "Time Period",
+      content: "Only search for institutional responses that occurred within the time period of 2002 to 2019.",
+    },
+  ],
 }
+
+const COUNTRIES = [
+  { code: "AR", name: "Argentina" },
+  { code: "CI", name: "Chile" },
+  { code: "PE", name: "Peru" },
+]
+
+const KEYWORD_TYPES = ["mining", "demand", "response"]
 
 export default function Home() {
   const [query, setQuery] = useState("")
@@ -143,11 +200,21 @@ export default function Home() {
   const [isBatchProcessing, setIsBatchProcessing] = useState(false)
   const abortControllerRef = useRef<AbortController | null>(null)
   const logsEndRef = useRef<HTMLDivElement>(null)
+  const [isClearingSession, setIsClearingSession] = useState(false)
 
   const [isManualAddDialogOpen, setIsManualAddDialogOpen] = useState(false)
   const [manualUrl, setManualUrl] = useState("")
   const [isAddingManualUrl, setIsAddingManualUrl] = useState(false)
   const [manualAddResult, setManualAddResult] = useState<{ message: string; result?: any } | null>(null)
+
+  // GDELT Search State
+  const [gdeltQuery, setGdeltQuery] = useState("")
+  const [selectedCountries, setSelectedCountries] = useState<string[]>([])
+  const [selectedKeywordTypes, setSelectedKeywordTypes] = useState<string[]>([])
+  const [gdeltResults, setGdeltResults] = useState<string[]>([])
+  const [isGdeltSearching, setIsGdeltSearching] = useState(false)
+  const [selectedGdeltResults, setSelectedGdeltResults] = useState<string[]>([])
+  const [isAddingGdeltResults, setIsAddingGdeltResults] = useState(false)
 
   const scrollToBottom = () => {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -204,8 +271,8 @@ export default function Home() {
         parsed = JSON.parse(rawJson)
       } catch {
         const cleaned = rawJson
-          .replace(/^\`\`\`json/, "")
-          .replace(/\`\`\`$/, "")
+          .replace(/^```json/, "")
+          .replace(/```$/, "")
           .replace(/^"|"$/g, "")
           .replace(/\\"/g, '"')
           .replace(/\\n/g, "\n")
@@ -225,7 +292,7 @@ export default function Home() {
 
   const convertRulesToXML = (rules: Rule[]): string => {
     let xml = "<methodology>\n"
-    rules.forEach(rule => {
+    rules.forEach((rule) => {
       xml += `  <rule id="${rule.id}">\n`
       xml += `    <title>${rule.title}</title>\n`
       xml += `    <content>${rule.content}</content>\n`
@@ -235,11 +302,16 @@ export default function Home() {
     return xml
   }
 
+  // Update these functions in your Next.js component:
+
+  // 1. Fix fetchAllResults function
   const fetchAllResults = async () => {
     setIsLoadingDatabase(true)
     try {
       const baseUrl = BASE_URL
-      const response = await fetch(`${baseUrl}/all-search-results`)
+      const response = await fetch(`${baseUrl}/all-search-results`, {
+        credentials: "include", // Add this line
+      })
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
@@ -254,11 +326,13 @@ export default function Home() {
     }
   }
 
+  // 2. Fix removeResult function
   const removeResult = async (resultId: number) => {
     try {
       const baseUrl = BASE_URL
       const response = await fetch(`${baseUrl}/remove/${resultId}`, {
         method: "DELETE",
+        credentials: "include", // Add this line
       })
 
       if (!response.ok) {
@@ -271,6 +345,48 @@ export default function Home() {
     }
   }
 
+  const clearSessionResults = async () => {
+    try {
+      const response = await fetch(`${BASE_URL}/clear-session-results`, {
+        method: "DELETE",
+        credentials: "include",
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      console.log(data.message)
+
+      // Clear the local state
+      setDatabaseResults([])
+
+      return data
+    } catch (error) {
+      console.error("Failed to clear session results:", error)
+      throw error
+    }
+  }
+
+  const handleClearSession = async () => {
+    if (!window.confirm("Are you sure you want to clear all your search results? This action cannot be undone.")) {
+      return
+    }
+
+    setIsClearingSession(true)
+    try {
+      const result = await clearSessionResults()
+      // Optionally show success message
+      console.log(`Cleared ${result.deleted_count} results from session ${result.session_id}`)
+    } catch (error) {
+      console.error("Failed to clear session results:", error)
+    } finally {
+      setIsClearingSession(false)
+    }
+  }
+
+  // 3. Fix processDatabase function
   const processDatabase = async () => {
     setIsProcessing(true)
     try {
@@ -280,6 +396,7 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include", // Add this line
       })
 
       if (!response.ok) {
@@ -295,11 +412,14 @@ export default function Home() {
     }
   }
 
+  // 4. Fix fetchCSVData function
   const fetchCSVData = async () => {
     setIsLoadingCSV(true)
     try {
       const baseUrl = BASE_URL
-      const response = await fetch(`${baseUrl}/resultscsv`)
+      const response = await fetch(`${baseUrl}/resultscsv`, {
+        credentials: "include", // Add this line
+      })
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
@@ -316,6 +436,106 @@ export default function Home() {
     }
   }
 
+  // 5. Fix addManualUrl function
+  const addManualUrl = async () => {
+    if (!manualUrl.trim()) return
+
+    setIsAddingManualUrl(true)
+    setManualAddResult(null)
+
+    try {
+      const baseUrl = BASE_URL
+      const response = await fetch(`${baseUrl}/add_manual_result`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          url: manualUrl.trim(),
+        }),
+        credentials: "include", // Add this line
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      setManualAddResult(data)
+      setManualUrl("")
+
+      // Refresh database results if they're currently displayed
+      if (isDatabaseOpen) {
+        fetchAllResults()
+      }
+    } catch (error) {
+      setManualAddResult({
+        message: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+      })
+    } finally {
+      setIsAddingManualUrl(false)
+    }
+  }
+
+  const handleGdeltResultSelection = (url: string, checked: boolean) => {
+    if (checked) {
+      setSelectedGdeltResults([...selectedGdeltResults, url])
+    } else {
+      setSelectedGdeltResults(selectedGdeltResults.filter((u) => u !== url))
+    }
+  }
+
+  const addSelectedGdeltResults = async () => {
+    if (selectedGdeltResults.length === 0) return
+
+    setIsAddingGdeltResults(true)
+
+    try {
+      const baseUrl = BASE_URL
+      let successCount = 0
+      let errorCount = 0
+
+      for (const url of selectedGdeltResults) {
+        try {
+          const response = await fetch(`${baseUrl}/add_manual_result`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              url: url.trim(),
+            }),
+            credentials: "include",
+          })
+
+          if (response.ok) {
+            successCount++
+          } else {
+            errorCount++
+          }
+        } catch (error) {
+          errorCount++
+          console.error(`Failed to add URL ${url}:`, error)
+        }
+      }
+
+      console.log(`Added ${successCount} URLs successfully, ${errorCount} failed`)
+
+      // Clear selections after adding
+      setSelectedGdeltResults([])
+
+      // Refresh database results if they're currently displayed
+      if (isDatabaseOpen) {
+        fetchAllResults()
+      }
+    } catch (error) {
+      console.error("Failed to add GDELT results:", error)
+    } finally {
+      setIsAddingGdeltResults(false)
+    }
+  }
+
+  // 6. Fix processBatchQueries function (if you have a batch endpoint)
   const processBatchQueries = async () => {
     const queries = batchQueries
       .split("\n")
@@ -340,6 +560,7 @@ export default function Home() {
           queries: queries,
           methodology: methodologyXML,
         }),
+        credentials: "include", // Add this line
       })
 
       if (!response.ok) {
@@ -388,6 +609,7 @@ export default function Home() {
           methodology: methodologyXML,
         }),
         signal: abortController.signal,
+        credentials: "include",
       })
 
       if (!response.ok) {
@@ -443,9 +665,49 @@ export default function Home() {
     }
   }
 
+  const startGdeltSearch = async () => {
+    if (!gdeltQuery.trim() || selectedCountries.length === 0) return
+
+    setIsGdeltSearching(true)
+    setGdeltResults([])
+    setSelectedGdeltResults([]) // Clear previous selections
+
+    try {
+      const keywords = [gdeltQuery.trim(), ...selectedKeywordTypes]
+
+      const response = await fetch(`${BASE_URL}/gdelt-search`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          countries: selectedCountries,
+          keywords: keywords,
+        }),
+        credentials: "include",
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const urls = await response.json()
+      setGdeltResults(urls)
+    } catch (error) {
+      console.error("Failed to perform GDELT search:", error)
+    } finally {
+      setIsGdeltSearching(false)
+    }
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     startResearch()
+  }
+
+  const handleGdeltSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    startGdeltSearch()
   }
 
   const handlePresetSelect = (presetKey: keyof typeof PRESETS) => {
@@ -459,19 +721,33 @@ export default function Home() {
     }
   }
 
+  const handleCountryChange = (countryCode: string, checked: boolean) => {
+    if (checked) {
+      setSelectedCountries([...selectedCountries, countryCode])
+    } else {
+      setSelectedCountries(selectedCountries.filter((c) => c !== countryCode))
+    }
+  }
+
+  const handleKeywordTypeChange = (keywordType: string, checked: boolean) => {
+    if (checked) {
+      setSelectedKeywordTypes([...selectedKeywordTypes, keywordType])
+    } else {
+      setSelectedKeywordTypes(selectedKeywordTypes.filter((k) => k !== keywordType))
+    }
+  }
+
   const addRule = () => {
-    const newId = (Math.max(...methodologyRules.map(r => parseInt(r.id)), 0) + 1).toString()
+    const newId = (Math.max(...methodologyRules.map((r) => Number.parseInt(r.id)), 0) + 1).toString()
     setMethodologyRules([...methodologyRules, { id: newId, title: "", content: "" }])
   }
 
   const removeRule = (id: string) => {
-    setMethodologyRules(methodologyRules.filter(rule => rule.id !== id))
+    setMethodologyRules(methodologyRules.filter((rule) => rule.id !== id))
   }
 
-  const updateRule = (id: string, field: 'title' | 'content', value: string) => {
-    setMethodologyRules(methodologyRules.map(rule =>
-      rule.id === id ? { ...rule, [field]: value } : rule
-    ))
+  const updateRule = (id: string, field: "title" | "content", value: string) => {
+    setMethodologyRules(methodologyRules.map((rule) => (rule.id === id ? { ...rule, [field]: value } : rule)))
   }
 
   const resetToDefault = () => {
@@ -502,45 +778,6 @@ export default function Home() {
     return log.replace(/^[⏳🚀🤖🔍📨🏁❌✅]\s*/u, "")
   }
 
-  const addManualUrl = async () => {
-    if (!manualUrl.trim()) return
-
-    setIsAddingManualUrl(true)
-    setManualAddResult(null)
-
-    try {
-      const baseUrl = BASE_URL
-      const response = await fetch(`${baseUrl}/add_manual_result`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          url: manualUrl.trim(),
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const data = await response.json()
-      setManualAddResult(data)
-      setManualUrl("")
-
-      // Refresh database results if they're currently displayed
-      if (isDatabaseOpen) {
-        fetchAllResults()
-      }
-    } catch (error) {
-      setManualAddResult({
-        message: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
-      })
-    } finally {
-      setIsAddingManualUrl(false)
-    }
-  }
-
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-7xl mx-auto px-6 py-12">
@@ -567,8 +804,9 @@ export default function Home() {
 
         {/* Database Results Section */}
         <div
-          className={`overflow-hidden transition-all duration-300 ease-in-out mb-8 ${isDatabaseOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
-            }`}
+          className={`overflow-hidden transition-all duration-300 ease-in-out mb-8 ${
+            isDatabaseOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+          }`}
         >
           <Card className="border border-gray-200 shadow-none">
             <CardHeader className="pb-3">
@@ -621,6 +859,21 @@ export default function Home() {
                     className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1 h-8"
                   >
                     Add URL
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleClearSession}
+                    disabled={isClearingSession || isLoadingDatabase}
+                    className="bg-red-600 hover:bg-red-700 text-white text-sm px-3 py-1 h-8"
+                  >
+                    {isClearingSession ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                        Clearing...
+                      </>
+                    ) : (
+                      "Clear All"
+                    )}
                   </Button>
                   <Button
                     type="button"
@@ -784,10 +1037,11 @@ export default function Home() {
 
               {manualAddResult && (
                 <div
-                  className={`p-3 rounded-md text-sm ${manualAddResult.message.includes("Error")
+                  className={`p-3 rounded-md text-sm ${
+                    manualAddResult.message.includes("Error")
                       ? "bg-red-50 text-red-700 border border-red-200"
                       : "bg-green-50 text-green-700 border border-green-200"
-                    }`}
+                  }`}
                 >
                   <div className="font-medium mb-1">{manualAddResult.message}</div>
                   {manualAddResult.result && (
@@ -890,6 +1144,11 @@ antamina community opposition`}
 
         {/* Search Form */}
         <div className="mb-8 space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Globe className="w-5 h-5 text-gray-600" />
+            <h2 className="text-lg font-medium text-black">AI Search</h2>
+          </div>
+
           <form onSubmit={handleSubmit} className="flex gap-3">
             <div className="flex-1 relative">
               <Input
@@ -933,8 +1192,9 @@ antamina community opposition`}
 
           {/* Methodology Editor - Rule-based XML system */}
           <div
-            className={`overflow-hidden transition-all duration-300 ease-in-out ${isMethodologyOpen ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
-              }`}
+            className={`overflow-hidden transition-all duration-300 ease-in-out ${
+              isMethodologyOpen ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
+            }`}
           >
             <Card className="border border-gray-200 shadow-none">
               <CardContent className="p-4">
@@ -956,7 +1216,7 @@ antamina community opposition`}
                         variant="outline"
                         size="sm"
                         onClick={addRule}
-                        className="text-xs border-gray-300 hover:bg-gray-50 text-gray-700 h-auto px-2 py-1"
+                        className="text-xs border-gray-300 hover:bg-gray-50 text-gray-700 h-auto px-2 py-1 bg-transparent"
                       >
                         <Plus className="w-3 h-3 mr-1" />
                         Add Rule
@@ -1007,14 +1267,14 @@ antamina community opposition`}
                           <Input
                             placeholder="Rule title (e.g., Goal, Relevance, Sources)"
                             value={rule.title}
-                            onChange={(e) => updateRule(rule.id, 'title', e.target.value)}
+                            onChange={(e) => updateRule(rule.id, "title", e.target.value)}
                             className="text-sm border-gray-300 focus:border-gray-400 focus:ring-0 rounded-md"
                             disabled={isSearching}
                           />
                           <Textarea
                             placeholder="Rule content..."
                             value={rule.content}
-                            onChange={(e) => updateRule(rule.id, 'content', e.target.value)}
+                            onChange={(e) => updateRule(rule.id, "content", e.target.value)}
                             className="min-h-[60px] text-sm border-gray-300 focus:border-gray-400 focus:ring-0 rounded-md resize-none"
                             disabled={isSearching}
                           />
@@ -1038,6 +1298,174 @@ antamina community opposition`}
               </CardContent>
             </Card>
           </div>
+        </div>
+
+        {/* GDELT Search Form */}
+        <div className="mb-8 space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Globe className="w-5 h-5 text-gray-600" />
+            <h2 className="text-lg font-medium text-black">GDELT Search</h2>
+          </div>
+
+          <Card className="border border-gray-200 shadow-none">
+            <CardContent className="p-4">
+              <form onSubmit={handleGdeltSubmit} className="space-y-4">
+                {/* Search Input */}
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">Search Term</label>
+                  <Input
+                    type="text"
+                    placeholder="Enter search term (e.g., quebrada blanca)..."
+                    value={gdeltQuery}
+                    onChange={(e) => setGdeltQuery(e.target.value)}
+                    className="h-11 text-base border-gray-300 focus:border-gray-400 focus:ring-0 rounded-md"
+                    disabled={isGdeltSearching}
+                  />
+                </div>
+
+                {/* Countries Checkboxes */}
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">Countries</label>
+                  <div className="flex gap-4">
+                    {COUNTRIES.map((country) => (
+                      <div key={country.code} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={country.code}
+                          checked={selectedCountries.includes(country.code)}
+                          onCheckedChange={(checked) => handleCountryChange(country.code, checked as boolean)}
+                          disabled={isGdeltSearching}
+                        />
+                        <label htmlFor={country.code} className="text-sm text-gray-700 cursor-pointer select-none">
+                          {country.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Keyword Types Checkboxes */}
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">Additional Keywords</label>
+                  <div className="flex gap-4">
+                    {KEYWORD_TYPES.map((keywordType) => (
+                      <div key={keywordType} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={keywordType}
+                          checked={selectedKeywordTypes.includes(keywordType)}
+                          onCheckedChange={(checked) => handleKeywordTypeChange(keywordType, checked as boolean)}
+                          disabled={isGdeltSearching}
+                        />
+                        <label
+                          htmlFor={keywordType}
+                          className="text-sm text-gray-700 cursor-pointer select-none capitalize"
+                        >
+                          {keywordType}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Submit Button */}
+                <div className="flex justify-end">
+                  <Button
+                    type="submit"
+                    disabled={!gdeltQuery.trim() || selectedCountries.length === 0 || isGdeltSearching}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    {isGdeltSearching ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        Searching...
+                      </>
+                    ) : (
+                      <>
+                        <Globe className="w-4 h-4 mr-2" />
+                        Search GDELT
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+
+          {/* GDELT Results */}
+          {gdeltResults.length > 0 && (
+            <Card className="border border-gray-200 shadow-none">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg font-medium text-black">GDELT Results</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                      {gdeltResults.length} URLs found
+                    </Badge>
+                    {selectedGdeltResults.length > 0 && (
+                      <Badge variant="secondary" className="bg-green-100 text-green-700">
+                        {selectedGdeltResults.length} selected
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="max-h-80 overflow-y-auto">
+                  <div className="divide-y divide-gray-200">
+                    {gdeltResults.map((url, index) => (
+                      <div key={index} className="p-4 hover:bg-gray-50 transition-colors">
+                        <div className="flex items-center gap-4">
+                          <Checkbox
+                            id={`gdelt-${index}`}
+                            checked={selectedGdeltResults.includes(url)}
+                            onCheckedChange={(checked) => handleGdeltResultSelection(url, checked as boolean)}
+                            disabled={isAddingGdeltResults}
+                          />
+                          <div className="flex-1">
+                            <div className="text-sm text-gray-600 truncate">{url}</div>
+                            <div className="text-xs text-gray-400 mt-1">{url ? new URL(url).hostname : "Unknown"}</div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            asChild
+                            className="flex-shrink-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                          >
+                            <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
+                              <ExternalLink className="w-4 h-4" />
+                            </a>
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="p-4 border-t border-gray-200 bg-gray-50">
+                  <div className="flex justify-between items-center">
+                    <div className="text-sm text-gray-600">
+                      {selectedGdeltResults.length} of {gdeltResults.length} URLs selected
+                    </div>
+                    <Button
+                      onClick={addSelectedGdeltResults}
+                      disabled={selectedGdeltResults.length === 0 || isAddingGdeltResults}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      {isAddingGdeltResults ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          Adding to Database...
+                        </>
+                      ) : (
+                        <>
+                          <Database className="w-4 h-4 mr-2" />
+                          Add to Database ({selectedGdeltResults.length})
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
