@@ -2,1738 +2,1568 @@
 
 import type React from "react"
 
-import { useState, useEffect, useRef } from "react"
-import { AnimatePresence } from "framer-motion"
-import XMLViewer from "react-xml-viewer"
+import { useEffect, useRef, useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Search,
-  Clock,
-  FileText,
+  ExternalLink,
   Loader2,
-  Save,
-  LinkIcon,
-  Map,
-  X,
-  Plus,
-  Trash2,
-  XIcon,
-  FileIcon,
-  FolderIcon,
-  ExternalLinkIcon,
-  ChevronRight,
+  Circle,
+  Settings,
   ChevronDown,
-  MapPin,
+  ChevronUp,
+  BookOpen,
+  Database,
+  Trash2,
+  RefreshCw,
+  FileText,
+  List,
+  Plus,
+  X,
   Globe,
-  Building,
-  Navigation,
-  AlertCircle,
-  Menu,
-  Star,
-  TrendingUp,
-  Code,
-  Copy,
-  Edit,
-  Check,
 } from "lucide-react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import Link from "next/link"
-import { ClerkProvider, SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs"
+
+const BASE_URL = "http://localhost:8000"
+// const BASE_URL = "https://s25api.millerding.com"
 
 interface SearchResult {
   url: string
   title: string
-  confidence: string
-  lang?: string
-  methodology?: string
+  snippet: string
+}
+
+interface DatabaseResult {
+  id: number
+  link: string
+  search_query: string
+  snippet: string
+  title: string
+}
+
+interface CSVData {
+  headers: string[]
+  rows: string[][]
 }
 
 interface Rule {
+  id: string
   title: string
   content: string
 }
 
-interface FileItem {
-  name: string
-  path: string
-  isFolder: boolean
-  children?: FileItem[]
-}
+const DEFAULT_METHODOLOGY_RULES: Rule[] = [
+  {
+    id: "1",
+    title: "Goal",
+    content:
+      "Search for protest events from local news agencies, journalists, and other relevant local articles related to this mine location.",
+  },
+  {
+    id: "2",
+    title: "Relevance",
+    content: "Prioritize protests that are directly connected to the mine specified.",
+  },
+  {
+    id: "3",
+    title: "Sources",
+    content:
+      "Focus on these domains first. If there is not enough relevant information, open the search to more domains: https://noalamina.org/, https://olca.cl/oca/index.php, https://www.minesandcommunities.org/, ejatlas.org",
+  },
+]
 
-interface GISResponse {
-  administrative_data: {
-    "ISO3166-2-lvl4"?: string
-    city?: string
-    country?: string
-    country_code?: string
-    county?: string
-    postcode?: string
-    road?: string
-    shop?: string
-    state?: string
-    state_district?: string
-  }
-  location_data: {
-    lat?: number
-    lon?: number
-    name?: string
-    source?: string
-    error?: string
-  }
-  nearby_communities: Array<{
-    lat: number
-    lon: number
-    name: string
-  }>
-  query: string
-}
+const PRESET_CATEGORIES = ["Protest Events", "Institutional Demands", "Institutional Responses"]
 
-interface CustomMethodology {
-  name: string
-  content?: string
-}
-
-// const baseUrl = "https://s25api.millerding.com"
-const baseUrl = "http://localhost:8000"
-
-export default function SearchDashboard() {
-  const [query, setQuery] = useState("")
-  const [currentResults, setCurrentResults] = useState<SearchResult[]>([])
-  const [previousResults, setPreviousResults] = useState<SearchResult[]>([])
-  const [rules, setRules] = useState<Rule[]>([
+const PRESETS = {
+  preset1: [
     {
-      title: "",
-      content: "",
+      id: "1",
+      title: "Methodology",
+      content:
+        "Search for protest events. A protest event is a public political action by a group of people who make demands on authorities such as companies, political actors and the state.",
     },
-  ])
-  const [isLoading, setIsLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState("current")
-  const [error, setError] = useState("")
-  const [isMethodologyLoading, setIsMethodologyLoading] = useState(false)
-  const [isUrlsLoading, setIsUrlsLoading] = useState(false)
-  const [isExtractLoading, setIsExtractLoading] = useState(false)
-  const [showUrlsModal, setShowUrlsModal] = useState(false)
-  const [urlsList, setUrlsList] = useState<string[]>([])
-  const initialMethodologyLoadedRef = useRef(false)
-  const [isClearLoading, setIsClearLoading] = useState(false)
-  const [files, setFiles] = useState<string[]>([])
-  const [fileSystem, setFileSystem] = useState<FileItem[]>([])
-  const [isFilesLoading, setIsFilesLoading] = useState(false)
-  const [selectedFile, setSelectedFile] = useState<string | null>(null)
-  const [showPdfModal, setShowPdfModal] = useState(false)
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
-  const [deletingResults, setDeletingResults] = useState<Set<string>>(new Set())
-  const [showGISModal, setShowGISModal] = useState(false)
-  const [gisQuery, setGisQuery] = useState("")
-  const [gisData, setGisData] = useState<GISResponse | null>(null)
-  const [isGISLoading, setIsGISLoading] = useState(false)
-  const [gisError, setGisError] = useState("")
-  const [methodologyVersion, setMethodologyVersion] = useState<1 | 2 | 3 | string>(1)
-  const [showMobileMenu, setShowMobileMenu] = useState(false)
-  const [showMethodologyModal, setShowMethodologyModal] = useState(false)
-  const [selectedMethodology, setSelectedMethodology] = useState<string>("")
-  const [selectedResultTitle, setSelectedResultTitle] = useState<string>("")
-  const [customMethodologies, setCustomMethodologies] = useState<string[]>([])
-  const [showCloneModal, setShowCloneModal] = useState(false)
-  const [cloneName, setCloneName] = useState("")
-  const [isCloning, setIsCloning] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
-  const [originalRules, setOriginalRules] = useState<Rule[]>([])
+    {
+      id: "2",
+      title: "Countries to Search In",
+      content: "**CRITICAL**: You must only search for content related to Argentina, Chile, and Peru.",
+    },
+    {
+      id: "3",
+      title: "**CRITICAL** Related Industries",
+      content:
+        "Limit the search to protest events against mining companies and mining projects. Do not include oil and gas projects in the search.",
+    },
+    {
+      id: "5",
+      title: "Whitelisted Sources",
+      content:
+        "Search for results on these websites first, by using multiple OR statements. The domains are:\nhttps://www.lanacion.com.ar/\nhttps://www.clarin.com/\nhttps://www.larazon.es/\nhttps://www.cronista.com/\nhttps://www.diariouno.com.ar/\nhttps://www.diarioregistrado.com/\nhttps://www.minutouno.com/\nhttp://www.nochepolar.com/\nhttps://www.ambito.com/\nhttps://noticiasargentinas.com/\nhttps://www.perfil.com/\nhttps://www.pagina12.com.ar/\nhttps://www.lacuarta.com/temas/argentina/\nhttps://elsigloweb.com/\nhttps://www.lun.com/\nhttps://www.elancasti.com.ar/\nhttps://www.elesquiu.com/\nhttps://www.diariodecuyo.com.ar/\nhttps://www.tiempodesanjuan.com/\nhttps://www.tiemposur.com.ar/\nhttps://www.eltribuno.com/\nhttps://www.anred.org/\nhttps://palpalainforma.com/\nhttps://www.copenoa.com.ar/\nhttps://latinta.com.ar/\nhttps://elresaltador.com.ar/\nhttps://enredaccion.com.ar/\nhttps://argentina.indymedia.org/\nhttps://periodicas.com.ar/\nhttps://www.tiempoar.com.ar/\nhttps://suresnoticias.com.ar/\nhttps://www.cordobatimes.com/\nhttps://www.ocmal.org/\nhttps://ejatlas.org/\nhttps://olca.cl/oca/index.php\nhttps://www.minesandcommunities.org/\nhttps://www.redlatinoamericanademujeres.org/\nhttps://www.aomaosam.org.ar/aoma/\nhttps://www.argentina.gob.ar/justicia/institucional\nhttps://www.argentina.gob.ar/capital-humano/trabajo\nhttps://noalamina.org/\nhttps://concienciasolidaria.org.ar/es/\nhttps://asambleasdecomunidades.org.ar/\nhttps://miningpress.com/\nhttps://enernews.com/\nhttps://www.panorama-minero.com\nhttps://huellaminera.com/\nhttps://www.mining.com/\nhttps://www.mining-journal.com/\nhttps://im-mining.com/\nhttps://www.mch.cl/\nhttps://energiminas.com/\nhttps://www.portalminero.com/\nhttps://www.bnamericas.com/",
+    },
+    {
+      id: "6",
+      title: "Time Period",
+      content: "Only search for content related to events that occurred within the time period of 2002 to 2019.",
+    },
+  ],
+  preset2: [
+    {
+      id: "1",
+      title: "Methodology",
+      content:
+        "Search for demands by individuals and civil society organizations on the courts and regulatory and administrative agencies of the state. This includes submitting legal complaints to the courts or bringing complaints to state regulatory agencies.",
+    },
+    {
+      id: "2",
+      title: "Countries to Search In",
+      content: "**CRITICAL**: You must only search for content related to Argentina, Chile, and Peru.",
+    },
+    {
+      id: "3",
+      title: "**CRITICAL** Related Industries",
+      content:
+        "Limit the search to demands or complaints against mining companies and mining projects. Do not include oil and gas projects in the search.",
+    },
+    {
+      id: "4",
+      title: "Keywords to Search For",
+      content:
+        "Keywords describing complaints include: claim / demand / accusation (denuncia); regulatory claim (denuncia ante las autoridades / reclamación ante las autoridades); formal claim (reclamo formal / presentación ante autoridades); queja (complaint); claim of pollution (denuncia de contaminación); claim of spill (denuncia de derrame); environmental crime (delito ambiental).\n\nKeywords describing legal complaints include: violation of rights (violación de derechos); abuse of rights (abuso de derechos); lack of respect for rights (falta de respeto por los derechos); right to prior consultation (derecho a la consulta previa); right to water (derecho al agua); right to a clean environment (derecho a un medio ambiente limpio); protection (amparo); constitutional protection appeal (recurso de amparo); judicial submission (demanda judicial / querella); criminal complaint (denuncia penal); precautionary measure (cautelar / medida cautelar); appeal for unconstitutionality (recurso de inconstitucionalidad); appeal (recurso de apelación / revisión / casación); class action (acción colectiva); strategic litigation (litigio estratégico); judicial presentation (presentación judicial); petition (petición); counterclaim (reconvención); legal remedy (recurso); motion for clarification (recurso de aclaración); administrative appeal (recurso de alzada); motion for reconsideration (recurso de reposición); appeal for reconsideration (recurso de súplica); demand (requerimiento); litigation (pleito); question (interpelación).",
+    },
+    {
+      id: "5",
+      title: "Time Period",
+      content: "Only search for demands or complaints that occurred within the time period of 2002 to 2019.",
+    },
+  ],
+  preset3: [
+    {
+      id: "1",
+      title: "Methodology",
+      content:
+        "Search for institutional responses by the courts and regulatory and administrative agencies of the state to complaints by individuals and civil society organizations.",
+    },
+    {
+      id: "2",
+      title: "Countries to Search In",
+      content: "**CRITICAL**: You must only search for content related to Argentina, Chile, and Peru.",
+    },
+    {
+      id: "3",
+      title: "**CRITICAL** Related Industries",
+      content:
+        "Limit the search to institutional responses that affect mining companies. Do not include oil and gas projects in the search.",
+    },
+    {
+      id: "4",
+      title: "Keywords to Search For",
+      content:
+        "Keywords describing institutional responses by regulatory agencies include: environmental inspection (inspección ambiental); mitigation (mitigación); pasivo ambiental (environmental liability); plan de contingencia (contingency plan); environmental audit (auditoría ambiental); final disposition (disposición final); monitoring (monitoreo); certificate (acta / resolución); administrative act (acto administrativo); arbitration (arbitraje); public consultation (audiencia pública / consulta pública); workshop (mesa de trabajo); encumbrance / charge (gravamen); fine (multa); restoration (restauración); environmental clean-up (saneamiento ambiental); revocation of environmental licence (revocación de licencia ambiental / revocación de resolución de calificación ambiental); formulation of charges (formulación de cargos); compliance program (programa de cumplimiento); contaminants criteria (contaminantes criterio); environmental monitoring (fiscalización ambiental); temporary measures (medidas providenciales); self-reporting (autodenuncia); noncompliance (incumplimiento); mining protection (amparo minero); environmental certificate (certificación ambiental); environmental management audit (auditoría de gestión ambiental); polluted area (zona saturada).\n\nKeywords describing institutional responses by the courts include: arbitration award (laudo); nullity of proceedings (nulidad de actuaciones); invitation to take legal action (ofrecimiento de acciones); enabling (habilitación); preliminary ruling (prejudicial); prescription (prescripción); breach (quebramiento); breach of sentence (quebramiento de condena); procedural irregularity / breach of procedure (quebramiento de forma); cessation (casación); precautionary measure (medida cautelar); withdrawal (desistimiento); decree (decreto); edict (edicto); ruling (fallo); final ruling / final judgement (firme).",
+    },
+    {
+      id: "5",
+      title: "Time Period",
+      content: "Only search for institutional responses that occurred within the time period of 2002 to 2019.",
+    },
+  ],
+}
 
-  const rulesToXML = (rulesArray: Rule[]): string => {
-    const rulesXML = rulesArray
-      .map(
-        (rule) => `  <rule>
-    <title>${rule.title}</title>
-    <content>${rule.content}</content>
-  </rule>`,
-      )
-      .join("\n")
+const COUNTRIES = [
+  { code: "AR", name: "Argentina" },
+  { code: "CI", name: "Chile" },
+  { code: "PE", name: "Peru" },
+]
 
-    return `<rules>
-${rulesXML}
-</rules>`
+const KEYWORD_TYPES = ["mining", "demand", "response"]
+
+export default function Home() {
+  const [query, setQuery] = useState("")
+  const [methodologyRules, setMethodologyRules] = useState<Rule[]>(DEFAULT_METHODOLOGY_RULES)
+  const [isMethodologyOpen, setIsMethodologyOpen] = useState(false)
+  const [isDatabaseOpen, setIsDatabaseOpen] = useState(false)
+  const [logs, setLogs] = useState<string[]>([])
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
+  const [databaseResults, setDatabaseResults] = useState<DatabaseResult[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [isLoadingDatabase, setIsLoadingDatabase] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [hasProcessed, setHasProcessed] = useState(false)
+  const [csvData, setCsvData] = useState<CSVData | null>(null)
+  const [isLoadingCSV, setIsLoadingCSV] = useState(false)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isBatchDialogOpen, setIsBatchDialogOpen] = useState(false)
+  const [batchQueries, setBatchQueries] = useState("")
+  const [isBatchProcessing, setIsBatchProcessing] = useState(false)
+  const abortControllerRef = useRef<AbortController | null>(null)
+  const logsEndRef = useRef<HTMLDivElement>(null)
+  const [isClearingSession, setIsClearingSession] = useState(false)
+
+  const [isManualAddDialogOpen, setIsManualAddDialogOpen] = useState(false)
+  const [manualUrl, setManualUrl] = useState("")
+  const [isAddingManualUrl, setIsAddingManualUrl] = useState(false)
+  const [manualAddResult, setManualAddResult] = useState<{ message: string; result?: any } | null>(null)
+
+  // GDELT Search State
+  const [gdeltQuery, setGdeltQuery] = useState("")
+  const [selectedCountries, setSelectedCountries] = useState<string[]>([])
+  const [selectedKeywordTypes, setSelectedKeywordTypes] = useState<string[]>([])
+  const [gdeltResults, setGdeltResults] = useState<string[]>([])
+  const [isGdeltSearching, setIsGdeltSearching] = useState(false)
+  const [selectedGdeltResults, setSelectedGdeltResults] = useState<string[]>([])
+  const [isAddingGdeltResults, setIsAddingGdeltResults] = useState(false)
+
+  const scrollToBottom = () => {
+    logsEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 
-  // Parse XML format to rules array
-  const parseXMLToRules = (xmlString: string): Rule[] => {
-    try {
-      // Simple regex parsing for the specific XML format
-      const ruleMatches = xmlString.match(/<rule>[\s\S]*?<\/rule>/g)
-      if (!ruleMatches) return []
+  useEffect(() => {
+    scrollToBottom()
+  }, [logs])
 
-      return ruleMatches.map((ruleXML) => {
-        const titleMatch = ruleXML.match(/<title>([\s\S]*?)<\/title>/)
-        const contentMatch = ruleXML.match(/<content>([\s\S]*?)<\/content>/)
+  const parseCSV = (csvText: string): CSVData => {
+    const lines = csvText.trim().split("\n")
 
-        return {
-          title: titleMatch ? titleMatch[1].trim() : "",
-          content: contentMatch ? contentMatch[1].trim() : "",
-        }
-      })
-    } catch (err) {
-      console.error("Error parsing XML:", err)
-      return []
-    }
-  }
+    const parseLine = (line: string) => {
+      const result: string[] = []
+      let current = ""
+      let inQuotes = false
 
-  // Function to format XML for display
-  const formatXMLForDisplay = (xmlString: string): string => {
-    if (!xmlString) return "No methodology available"
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i]
+        const nextChar = line[i + 1]
 
-    try {
-      // Add proper indentation and formatting
-      const formatted = xmlString.replace(/></g, ">\n<").replace(/^\s*\n/gm, "")
-
-      // Split into lines and add proper indentation
-      const lines = formatted.split("\n")
-      let indentLevel = 0
-      const indentSize = 2
-
-      const formattedLines = lines.map((line) => {
-        const trimmed = line.trim()
-        if (!trimmed) return ""
-
-        // Decrease indent for closing tags
-        if (trimmed.startsWith("</")) {
-          indentLevel = Math.max(0, indentLevel - 1)
-        }
-
-        const indentedLine = " ".repeat(indentLevel * indentSize) + trimmed
-
-        // Increase indent for opening tags (but not self-closing or closing tags)
-        if (trimmed.startsWith("<") && !trimmed.startsWith("</") && !trimmed.endsWith("/>")) {
-          indentLevel++
-        }
-
-        return indentedLine
-      })
-
-      return formattedLines.join("\n")
-    } catch (err) {
-      console.error("Error formatting XML:", err)
-      return xmlString
-    }
-  }
-
-  // Function to organize files into a folder structure
-  const organizeFileSystem = (fileList: string[]): FileItem[] => {
-    const root: FileItem[] = []
-    const folderMap: Record<string, FileItem> = {}
-
-    fileList.forEach((filePath) => {
-      const parts = filePath.split("/")
-
-      if (parts.length === 1) {
-        // This is a file at the root level
-        root.push({
-          name: parts[0],
-          path: parts[0],
-          isFolder: false,
-        })
-      } else {
-        // This is a file in a folder
-        let currentPath = ""
-        let parentFolder: FileItem | null = null
-
-        // Process each folder in the path
-        for (let i = 0; i < parts.length - 1; i++) {
-          const folderName = parts[i]
-          const folderPath = currentPath ? `${currentPath}/${folderName}` : folderName
-          currentPath = folderPath
-
-          if (!folderMap[folderPath]) {
-            // Create new folder
-            const newFolder: FileItem = {
-              name: folderName,
-              path: folderPath,
-              isFolder: true,
-              children: [],
-            }
-            folderMap[folderPath] = newFolder
-
-            // Add to parent or root
-            if (parentFolder) {
-              parentFolder.children!.push(newFolder)
-            } else {
-              root.push(newFolder)
-            }
-          }
-
-          parentFolder = folderMap[folderPath]
-        }
-
-        // Add the file to its parent folder
-        if (parentFolder) {
-          parentFolder.children!.push({
-            name: parts[parts.length - 1],
-            path: filePath,
-            isFolder: false,
-          })
+        if (char === '"' && inQuotes && nextChar === '"') {
+          current += '"' // escaped quote
+          i++
+        } else if (char === '"') {
+          inQuotes = !inQuotes
+        } else if (char === "," && !inQuotes) {
+          result.push(current)
+          current = ""
+        } else {
+          current += char
         }
       }
+      result.push(current)
+      return result
+    }
+
+    const headers = parseLine(lines[0])
+    const rows = lines.slice(1).map(parseLine)
+
+    return { headers, rows }
+  }
+
+  const parseSearchResults = (logEntry: string): SearchResult[] | null => {
+    try {
+      const prefix = "Response: "
+      if (!logEntry.startsWith(prefix)) return null
+
+      const rawJson = logEntry.slice(prefix.length).trim()
+
+      let parsed: any
+
+      try {
+        parsed = JSON.parse(rawJson)
+      } catch {
+        const cleaned = rawJson
+          .replace(/^```json/, "")
+          .replace(/```$/, "")
+          .replace(/^"|"$/g, "")
+          .replace(/\\"/g, '"')
+          .replace(/\\n/g, "\n")
+
+        parsed = JSON.parse(cleaned)
+      }
+
+      if (Array.isArray(parsed) && parsed.every((r) => r.url && r.title)) {
+        return parsed
+      }
+    } catch (error) {
+      console.error("Failed to parse search results:", error)
+    }
+
+    return null
+  }
+
+  const convertRulesToXML = (rules: Rule[]): string => {
+    let xml = "<methodology>\n"
+    rules.forEach((rule) => {
+      xml += `  <rule id="${rule.id}">\n`
+      xml += `    <title>${rule.title}</title>\n`
+      xml += `    <content>${rule.content}</content>\n`
+      xml += `  </rule>\n`
     })
-
-    return root
+    xml += "</methodology>"
+    return xml
   }
 
-  // Function to check if GIS data has valid location information
-  const hasValidLocationData = (data: GISResponse): boolean => {
-    return !!(
-      data.location_data &&
-      !data.location_data.error &&
-      data.location_data.lat !== undefined &&
-      data.location_data.lon !== undefined &&
-      data.location_data.name
-    )
-  }
+  // Update these functions in your Next.js component:
 
-  // Function to check if administrative data has any meaningful content
-  const hasAdministrativeData = (data: GISResponse): boolean => {
-    return !!(
-      data.administrative_data &&
-      Object.keys(data.administrative_data).length > 0 &&
-      Object.values(data.administrative_data).some((value) => value && value.trim() !== "")
-    )
-  }
+  // 1. Fix fetchAllResults function
+  const fetchAllResults = async () => {
+    setIsLoadingDatabase(true)
+    try {
+      const baseUrl = BASE_URL
+      const response = await fetch(`${baseUrl}/all-search-results`, {
+        credentials: "include", // Add this line
+      })
 
-  // Function to get error message from GIS response
-  const getGISErrorMessage = (data: GISResponse): string => {
-    if (data.location_data?.error) {
-      return data.location_data.error
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      setDatabaseResults(data)
+    } catch (error) {
+      console.error("Failed to fetch database results:", error)
+    } finally {
+      setIsLoadingDatabase(false)
     }
+  }
 
-    // Check if we have any meaningful data at all
-    if (!hasValidLocationData(data) && !hasAdministrativeData(data) && data.nearby_communities.length === 0) {
-      return "No location data found for this query. Please try a different search term or check the spelling."
+  // 2. Fix removeResult function
+  const removeResult = async (resultId: number) => {
+    try {
+      const baseUrl = BASE_URL
+      const response = await fetch(`${baseUrl}/remove/${resultId}`, {
+        method: "DELETE",
+        credentials: "include", // Add this line
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      setDatabaseResults((prev) => prev.filter((result) => result.id !== resultId))
+    } catch (error) {
+      console.error("Failed to remove result:", error)
     }
-
-    return ""
   }
 
-  // Function to handle methodology modal
-  const openMethodologyModal = (methodology: string, title: string) => {
-    setSelectedMethodology(methodology)
-    setSelectedResultTitle(title)
-    setShowMethodologyModal(true)
+  const clearSessionResults = async () => {
+    try {
+      const response = await fetch(`${BASE_URL}/clear-session-results`, {
+        method: "DELETE",
+        credentials: "include",
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      console.log(data.message)
+
+      // Clear the local state
+      setDatabaseResults([])
+
+      return data
+    } catch (error) {
+      console.error("Failed to clear session results:", error)
+      throw error
+    }
   }
 
-  // Function to check if current methodology is custom
-  const isCustomMethodology = (version: string | number): boolean => {
-    return typeof version === "string" && !["1", "2", "3"].includes(version)
-  }
-
-  // Function to check for unsaved changes
-  const checkForUnsavedChanges = () => {
-    if (originalRules.length === 0) {
-      setHasUnsavedChanges(false)
+  const handleClearSession = async () => {
+    if (!window.confirm("Are you sure you want to clear all your search results? This action cannot be undone.")) {
       return
     }
 
-    const currentXML = rulesToXML(rules)
-    const originalXML = rulesToXML(originalRules)
-    setHasUnsavedChanges(currentXML !== originalXML)
+    setIsClearingSession(true)
+    try {
+      const result = await clearSessionResults()
+      // Optionally show success message
+      console.log(`Cleared ${result.deleted_count} results from session ${result.session_id}`)
+    } catch (error) {
+      console.error("Failed to clear session results:", error)
+    } finally {
+      setIsClearingSession(false)
+    }
   }
 
-  const fetchSearchResults = async () => {
-    if (!query.trim()) return
-
-    setIsLoading(true)
-    setError("")
-
+  // 3. Fix processDatabase function
+  const processDatabase = async () => {
+    setIsProcessing(true)
     try {
-      const searchParams = new URLSearchParams()
-      searchParams.append("query", query)
-
-      // Convert rules to XML format for the request
-      const methodology = rulesToXML(rules)
-      console.log(methodology)
-      const response = await fetch(`${baseUrl}/search?${searchParams.toString()}`, {
+      const baseUrl = BASE_URL
+      const response = await fetch(`${baseUrl}/process`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ methodology }),
+        credentials: "include", // Add this line
       })
+
       if (!response.ok) {
-        throw new Error(`Error: ${response.status}`)
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      const data = await response.json()
-      setCurrentResults(data)
-    } catch (err) {
-      setError("Failed to fetch search results. Please check if the server is running.")
-      console.error(err)
+      setHasProcessed(true)
+      console.log("Database processed successfully")
+    } catch (error) {
+      console.error("Failed to process database:", error)
     } finally {
-      setIsLoading(false)
+      setIsProcessing(false)
     }
   }
 
-  const fetchAllResults = async () => {
-    if (activeTab === "previous") {
-      setIsLoading(true)
-    }
-
+  // 4. Fix fetchCSVData function
+  const fetchCSVData = async () => {
+    setIsLoadingCSV(true)
     try {
-      const response = await fetch(`${baseUrl}/results`)
+      const baseUrl = BASE_URL
+      const response = await fetch(`${baseUrl}/resultscsv`, {
+        credentials: "include", // Add this line
+      })
 
       if (!response.ok) {
-        throw new Error(`Error: ${response.status}`)
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      const data = await response.json()
-      setPreviousResults(data)
-    } catch (err) {
-      console.error("Failed to fetch previous results:", err)
+      const csvText = await response.text()
+      const parsedData = parseCSV(csvText)
+      setCsvData(parsedData)
+      setIsDialogOpen(true)
+    } catch (error) {
+      console.error("Failed to fetch CSV data:", error)
     } finally {
-      if (activeTab === "previous") {
-        setIsLoading(false)
-      }
+      setIsLoadingCSV(false)
     }
   }
 
-  const fetchMethodology = async (version: 1 | 2 | 3 | string = 1) => {
-    setIsMethodologyLoading(true)
+  // 5. Fix addManualUrl function
+  const addManualUrl = async () => {
+    if (!manualUrl.trim()) return
+
+    setIsAddingManualUrl(true)
+    setManualAddResult(null)
+
     try {
-      let response
-
-      if (typeof version === "string" && !["1", "2", "3"].includes(version)) {
-        // Custom methodology
-        response = await fetch(`${baseUrl}/methodology/custom/${encodeURIComponent(version)}`)
-      } else {
-        // Default methodology
-        response = await fetch(`${baseUrl}/methodology?version=${version}`)
-      }
-
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status}`)
-      }
-
-      const data = await response.text()
-      const parsedRules = parseXMLToRules(data)
-      if (parsedRules.length > 0) {
-        setRules(parsedRules)
-        setOriginalRules(parsedRules)
-        setHasUnsavedChanges(false)
-      }
-    } catch (err) {
-      console.error("Failed to fetch methodology:", err)
-      setError(`Failed to load methodology: ${version}`)
-    } finally {
-      setIsMethodologyLoading(false)
-    }
-  }
-
-  const fetchCustomMethodologies = async () => {
-    try {
-      const response = await fetch(`${baseUrl}/methodology/custom`)
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status}`)
-      }
-      const data = await response.json()
-      setCustomMethodologies(data)
-    } catch (err) {
-      console.error("Failed to fetch custom methodologies:", err)
-    }
-  }
-
-  const saveCustomMethodology = async () => {
-    if (!isCustomMethodology(methodologyVersion)) {
-      setError("Cannot save a default methodology")
-      return
-    }
-
-    setIsSaving(true)
-    try {
-      const content = rulesToXML(rules)
-      const response = await fetch(
-        `${baseUrl}/methodology/custom/${encodeURIComponent(methodologyVersion as string)}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ content }),
-        },
-      )
-
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status}`)
-      }
-
-      setOriginalRules([...rules])
-      setHasUnsavedChanges(false)
-      setError("")
-    } catch (err) {
-      console.error("Failed to save methodology:", err)
-      setError("Failed to save methodology. Please try again.")
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  const cloneMethodology = async () => {
-    if (!cloneName.trim()) {
-      setError("Please enter a name for the cloned methodology")
-      return
-    }
-
-    setIsCloning(true)
-    try {
-      const content = rulesToXML(rules)
-      const response = await fetch(`${baseUrl}/methodology/save`, {
+      const baseUrl = BASE_URL
+      const response = await fetch(`${baseUrl}/add_manual_result`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          name: cloneName.trim(),
-          content,
+          url: manualUrl.trim(),
         }),
+        credentials: "include", // Add this line
       })
 
       if (!response.ok) {
-        throw new Error(`Error: ${response.status}`)
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      // Refresh custom methodologies list
-      await fetchCustomMethodologies()
+      const data = await response.json()
+      setManualAddResult(data)
+      setManualUrl("")
 
-      // Switch to the new methodology
-      setMethodologyVersion(cloneName.trim())
-      setOriginalRules([...rules])
-      setHasUnsavedChanges(false)
-
-      // Close modal and reset
-      setShowCloneModal(false)
-      setCloneName("")
-      setError("")
-    } catch (err) {
-      console.error("Failed to clone methodology:", err)
-      setError("Failed to clone methodology. Name might already exist.")
+      // Refresh database results if they're currently displayed
+      if (isDatabaseOpen) {
+        fetchAllResults()
+      }
+    } catch (error) {
+      setManualAddResult({
+        message: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+      })
     } finally {
-      setIsCloning(false)
+      setIsAddingManualUrl(false)
     }
   }
 
-  const deleteCustomMethodology = async (name: string) => {
-    if (!confirm(`Are you sure you want to delete the methodology "${name}"? This action cannot be undone.`)) {
+  const handleGdeltResultSelection = (url: string, checked: boolean) => {
+    if (checked) {
+      setSelectedGdeltResults([...selectedGdeltResults, url])
+    } else {
+      setSelectedGdeltResults(selectedGdeltResults.filter((u) => u !== url))
+    }
+  }
+
+  const addSelectedGdeltResults = async () => {
+    if (selectedGdeltResults.length === 0) return
+
+    setIsAddingGdeltResults(true)
+
+    try {
+      const baseUrl = BASE_URL
+      let successCount = 0
+      let errorCount = 0
+
+      for (const url of selectedGdeltResults) {
+        try {
+          const response = await fetch(`${baseUrl}/add_manual_result`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              url: url.trim(),
+            }),
+            credentials: "include",
+          })
+
+          if (response.ok) {
+            successCount++
+          } else {
+            errorCount++
+          }
+        } catch (error) {
+          errorCount++
+          console.error(`Failed to add URL ${url}:`, error)
+        }
+      }
+
+      console.log(`Added ${successCount} URLs successfully, ${errorCount} failed`)
+
+      // Clear selections after adding
+      setSelectedGdeltResults([])
+
+      // Refresh database results if they're currently displayed
+      if (isDatabaseOpen) {
+        fetchAllResults()
+      }
+    } catch (error) {
+      console.error("Failed to add GDELT results:", error)
+    } finally {
+      setIsAddingGdeltResults(false)
+    }
+  }
+
+  // 6. Fix processBatchQueries function (if you have a batch endpoint)
+  const processBatchQueries = async () => {
+    const queries = batchQueries
+      .split("\n")
+      .map((q) => q.trim())
+      .filter((q) => q.length > 0)
+
+    if (queries.length === 0) {
       return
     }
 
+    setIsBatchProcessing(true)
     try {
-      const response = await fetch(`${baseUrl}/methodology/custom/${encodeURIComponent(name)}`, {
-        method: "DELETE",
-      })
+      const baseUrl = BASE_URL
+      const methodologyXML = convertRulesToXML(methodologyRules)
 
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status}`)
-      }
-
-      // Refresh custom methodologies list
-      await fetchCustomMethodologies()
-
-      // If we're currently viewing the deleted methodology, switch to preset 1
-      if (methodologyVersion === name) {
-        setMethodologyVersion(1)
-      }
-
-      setError("")
-    } catch (err) {
-      console.error("Failed to delete methodology:", err)
-      setError("Failed to delete methodology. Please try again.")
-    }
-  }
-
-  const fetchUrls = async () => {
-    setIsUrlsLoading(true)
-    try {
-      const response = await fetch(`${baseUrl}/urls`)
-
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status}`)
-      }
-
-      const data = await response.text()
-      const urlsArray = JSON.parse(data.replace(/'/g, '"'))
-      setUrlsList(urlsArray)
-      setShowUrlsModal(true)
-    } catch (err) {
-      console.error("Failed to fetch URLs:", err)
-      setError("Failed to fetch URLs. Please check if the server is running.")
-    } finally {
-      setIsUrlsLoading(false)
-    }
-  }
-
-  const fetchFiles = async () => {
-    if (activeTab === "files") {
-      setIsFilesLoading(true)
-    }
-
-    try {
-      const response = await fetch(`${baseUrl}/files`)
-
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status}`)
-      }
-
-      const data = await response.json()
-      setFiles(data)
-      setFileSystem(organizeFileSystem(data))
-    } catch (err) {
-      console.error("Failed to fetch files:", err)
-      if (activeTab === "files") {
-        setError("Failed to fetch files. Please check if the server is running.")
-      }
-    } finally {
-      if (activeTab === "files") {
-        setIsFilesLoading(false)
-      }
-    }
-  }
-
-  const fetchGISData = async () => {
-    if (!gisQuery.trim()) return
-
-    setIsGISLoading(true)
-    setGisError("")
-    setGisData(null)
-
-    try {
-      const response = await fetch(`${baseUrl}/gis?query=${encodeURIComponent(gisQuery)}`)
-
-      if (!response.ok) {
-        throw new Error(`HTTP Error: ${response.status}`)
-      }
-
-      const data = await response.json()
-
-      // Check for errors in the response data
-      const errorMessage = getGISErrorMessage(data)
-      if (errorMessage) {
-        setGisError(errorMessage)
-      } else {
-        setGisData(data)
-      }
-    } catch (err) {
-      console.error("Failed to fetch GIS data:", err)
-      setGisError("Failed to connect to the GIS service. Please check if the server is running and try again.")
-    } finally {
-      setIsGISLoading(false)
-    }
-  }
-
-  const openPdf = (filename: string) => {
-    setSelectedFile(filename)
-    setShowPdfModal(true)
-  }
-
-  const toggleFolder = (folderPath: string) => {
-    const newExpandedFolders = new Set(expandedFolders)
-    if (newExpandedFolders.has(folderPath)) {
-      newExpandedFolders.delete(folderPath)
-    } else {
-      newExpandedFolders.add(folderPath)
-    }
-    setExpandedFolders(newExpandedFolders)
-  }
-
-  const runExtract = async () => {
-    setIsExtractLoading(true)
-    try {
-      const response = await fetch(`${baseUrl}/extract`)
-
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status}`)
-      }
-
-      const result = await response.text()
-
-      if (result && result.trim() !== "null" && result.trim() !== "") {
-        window.open(`${baseUrl}/map`, "_blank")
-      } else {
-        setError("Extract operation failed or returned no result.")
-      }
-    } catch (err) {
-      console.error("Failed to run extract:", err)
-      setError("Failed to run extract. Please check if the server is running.")
-    } finally {
-      setIsExtractLoading(false)
-    }
-  }
-
-  const clearResults = async () => {
-    setIsClearLoading(true)
-    try {
-      const response = await fetch(`${baseUrl}/clear`)
-
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status}`)
-      }
-
-      const data = await response.json()
-
-      // Clear local state
-      setCurrentResults([])
-      setPreviousResults([])
-      setQuery("")
-
-      // Show success message briefly
-      setError("")
-      console.log(data.message) // You could also show this in a toast notification
-    } catch (err) {
-      console.error("Failed to clear results:", err)
-      setError("Failed to clear results. Please check if the server is running.")
-    } finally {
-      setIsClearLoading(false)
-    }
-  }
-
-  const deleteResult = async (url: string) => {
-    const newDeletingResults = new Set(deletingResults)
-    newDeletingResults.add(url)
-    setDeletingResults(newDeletingResults)
-
-    try {
-      const response = await fetch(`${baseUrl}/delete`, {
+      const response = await fetch(`${baseUrl}/batch`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({
+          queries: queries,
+          methodology: methodologyXML,
+        }),
+        credentials: "include", // Add this line
       })
 
       if (!response.ok) {
-        throw new Error(`Error: ${response.status}`)
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      // Refresh the previous results after successful deletion
-      await fetchAllResults()
-    } catch (err) {
-      console.error("Failed to delete result:", err)
-      setError("Failed to delete result. Please check if the server is running.")
+      console.log("Batch queries processed successfully")
+      setIsBatchDialogOpen(false)
+      setBatchQueries("")
+      // Optionally refresh the database results
+      if (isDatabaseOpen) {
+        fetchAllResults()
+      }
+    } catch (error) {
+      console.error("Failed to process batch queries:", error)
     } finally {
-      const updatedDeletingResults = new Set(deletingResults)
-      updatedDeletingResults.delete(url)
-      setDeletingResults(updatedDeletingResults)
+      setIsBatchProcessing(false)
+    }
+  }
+
+  const startResearch = async () => {
+    if (!query.trim()) return
+
+    setLogs([])
+    setSearchResults([])
+    setIsSearching(true)
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+
+    const abortController = new AbortController()
+    abortControllerRef.current = abortController
+
+    try {
+      const baseUrl = BASE_URL
+      const methodologyXML = convertRulesToXML(methodologyRules)
+
+      const response = await fetch(`${baseUrl}/stream`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          query: query.trim(),
+          methodology: methodologyXML,
+        }),
+        signal: abortController.signal,
+        credentials: "include",
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const reader = response.body?.getReader()
+      if (!reader) {
+        throw new Error("No response body reader available")
+      }
+
+      const decoder = new TextDecoder()
+
+      while (true) {
+        const { done, value } = await reader.read()
+
+        if (done) {
+          setIsSearching(false)
+          break
+        }
+
+        const chunk = decoder.decode(value, { stream: true })
+        const lines = chunk.split("\n")
+
+        for (const line of lines) {
+          if (line.trim() === "") continue
+
+          let logEntry = line
+          if (line.startsWith("data: ")) {
+            logEntry = line.slice(6)
+          }
+
+          if (logEntry.trim() === "") continue
+
+          setLogs((prev) => {
+            const results = parseSearchResults(logEntry)
+            if (results) {
+              setSearchResults(results)
+              return [...prev, "✅ Received JSON response successfully"]
+            }
+
+            return [...prev, logEntry]
+          })
+        }
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        setLogs((prev) => [...prev, "Request cancelled."])
+      } else {
+        setLogs((prev) => [...prev, `❌ Error: ${error instanceof Error ? error.message : "Unknown error"}`])
+      }
+      setIsSearching(false)
+    }
+  }
+
+  const startGdeltSearch = async () => {
+    if (!gdeltQuery.trim() || selectedCountries.length === 0) return
+
+    setIsGdeltSearching(true)
+    setGdeltResults([])
+    setSelectedGdeltResults([]) // Clear previous selections
+
+    try {
+      const keywords = [gdeltQuery.trim(), ...selectedKeywordTypes]
+
+      const response = await fetch(`${BASE_URL}/gdelt-search`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          countries: selectedCountries,
+          keywords: keywords,
+        }),
+        credentials: "include",
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const urls = await response.json()
+      setGdeltResults(urls)
+    } catch (error) {
+      console.error("Failed to perform GDELT search:", error)
+    } finally {
+      setIsGdeltSearching(false)
+    }
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    startResearch()
+  }
+
+  const handleGdeltSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    startGdeltSearch()
+  }
+
+  const handlePresetSelect = (presetKey: keyof typeof PRESETS) => {
+    setMethodologyRules(PRESETS[presetKey])
+  }
+
+  const handleDatabaseToggle = () => {
+    setIsDatabaseOpen(!isDatabaseOpen)
+    if (!isDatabaseOpen && databaseResults.length === 0) {
+      fetchAllResults()
+    }
+  }
+
+  const handleCountryChange = (countryCode: string, checked: boolean) => {
+    if (checked) {
+      setSelectedCountries([...selectedCountries, countryCode])
+    } else {
+      setSelectedCountries(selectedCountries.filter((c) => c !== countryCode))
+    }
+  }
+
+  const handleKeywordTypeChange = (keywordType: string, checked: boolean) => {
+    if (checked) {
+      setSelectedKeywordTypes([...selectedKeywordTypes, keywordType])
+    } else {
+      setSelectedKeywordTypes(selectedKeywordTypes.filter((k) => k !== keywordType))
     }
   }
 
   const addRule = () => {
-    setRules([...rules, { title: "", content: "" }])
-    checkForUnsavedChanges()
+    const newId = (Math.max(...methodologyRules.map((r) => Number.parseInt(r.id)), 0) + 1).toString()
+    setMethodologyRules([...methodologyRules, { id: newId, title: "", content: "" }])
   }
 
-  const removeRule = (index: number) => {
-    setRules(rules.filter((_, i) => i !== index))
-    checkForUnsavedChanges()
+  const removeRule = (id: string) => {
+    setMethodologyRules(methodologyRules.filter((rule) => rule.id !== id))
   }
 
-  const updateRule = (index: number, field: "title" | "content", value: string) => {
-    const updatedRules = [...rules]
-    updatedRules[index][field] = value
-    setRules(updatedRules)
-
-    // Immediately check for unsaved changes after updating
-    setTimeout(() => {
-      if (originalRules.length > 0) {
-        const currentXML = rulesToXML(updatedRules)
-        const originalXML = rulesToXML(originalRules)
-        setHasUnsavedChanges(currentXML !== originalXML)
-      }
-    }, 0)
+  const updateRule = (id: string, field: "title" | "content", value: string) => {
+    setMethodologyRules(methodologyRules.map((rule) => (rule.id === id ? { ...rule, [field]: value } : rule)))
   }
 
-  const handleGISSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    fetchGISData()
-  }
-
-  const resetGISModal = () => {
-    setGisData(null)
-    setGisError("")
-    setGisQuery("")
+  const resetToDefault = () => {
+    setMethodologyRules(DEFAULT_METHODOLOGY_RULES)
   }
 
   useEffect(() => {
-    fetchAllResults()
-    fetchMethodology(1) // Load version 1 by default
-    fetchFiles()
-    fetchCustomMethodologies()
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+    }
   }, [])
 
-  useEffect(() => {
-    fetchMethodology(methodologyVersion)
-    initialMethodologyLoadedRef.current = true
-  }, [methodologyVersion])
-
-  useEffect(() => {
-    if (currentResults.length > 0) {
-      fetchAllResults()
-    }
-  }, [currentResults])
-
-  useEffect(() => {
-    if (activeTab === "previous") {
-      fetchAllResults()
-    } else if (activeTab === "files") {
-      fetchFiles()
-    } else if (activeTab === "methodology") {
-      fetchCustomMethodologies()
-    }
-  }, [activeTab])
-
-  // Remove this useEffect:
-  // useEffect(() => {
-  //   if (originalRules.length > 0) {
-  //     checkForUnsavedChanges()
-  //   }
-  // }, [rules, originalRules])
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    fetchSearchResults()
+  const getLogIcon = (log: string) => {
+    if (log.includes("⏳")) return "⏳"
+    if (log.includes("🚀")) return "🚀"
+    if (log.includes("🤖")) return "🤖"
+    if (log.includes("🔍")) return "🔍"
+    if (log.includes("📨")) return "📨"
+    if (log.includes("🏁")) return "🏁"
+    if (log.includes("❌")) return "❌"
+    if (log.includes("✅")) return "✅"
+    return "•"
   }
 
-  // Function to format filenames for display
-  const formatFilename = (filename: string) => {
-    // Get just the filename without the path
-    const baseName = filename.split("/").pop() || filename
-
-    // Replace underscores with spaces
-    let formatted = baseName.replace(/_/g, " ")
-
-    // Replace hyphens with spaces
-    formatted = formatted.replace(/-/g, " ")
-
-    // Remove common URL parts
-    formatted = formatted.replace(/www\.|\.com|\.org|\.cl|index\.php/g, "")
-
-    // Remove file extension
-    formatted = formatted.replace(/\.pdf$/, "")
-
-    return formatted
-  }
-
-  // Function to get domain from filename
-  const getDomain = (filename: string) => {
-    const baseName = filename.split("/").pop() || filename
-    const domainMatch = baseName.match(/^([^_]+)/)
-    return domainMatch ? domainMatch[1] : "unknown"
-  }
-
-  // Render file system items recursively
-  const renderFileSystemItems = (items: FileItem[]) => {
-    return items.map((item) => {
-      if (item.isFolder) {
-        const isExpanded = expandedFolders.has(item.path)
-        return (
-          <div key={item.path} className="mb-1">
-            <div
-              className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-              onClick={() => toggleFolder(item.path)}
-            >
-              {isExpanded ? (
-                <ChevronDown className="h-4 w-4 text-gray-400 flex-shrink-0" />
-              ) : (
-                <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
-              )}
-              <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                <FolderIcon className="h-4 w-4" />
-              </div>
-              <span className="font-medium text-gray-900 truncate">{item.name}</span>
-            </div>
-            {isExpanded && item.children && <div className="pl-7 mt-1">{renderFileSystemItems(item.children)}</div>}
-          </div>
-        )
-      } else {
-        return (
-          <div
-            key={item.path}
-            className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer ml-7 transition-colors group"
-            onClick={() => openPdf(item.path)}
-          >
-            <div className="w-8 h-8 bg-red-50 text-red-600 rounded-lg flex items-center justify-center flex-shrink-0">
-              <FileIcon className="h-4 w-4" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-medium text-gray-900 truncate">{formatFilename(item.name)}</div>
-              <div className="text-sm text-gray-500 truncate">{getDomain(item.name)}</div>
-            </div>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 flex-shrink-0">
-              <ExternalLinkIcon className="h-4 w-4" />
-            </Button>
-          </div>
-        )
-      }
-    })
+  const cleanLogText = (log: string) => {
+    return log.replace(/^[⏳🚀🤖🔍📨🏁❌✅]\s*/u, "")
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      {/* Navigation */}
-      <nav className="border-b border-gray-100 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <Link href="/" className="text-xl font-semibold text-gray-900">
-                S25 PEA
-              </Link>
+    <div className="min-h-screen bg-white">
+      <div className="max-w-7xl mx-auto px-6 py-12">
+        {/* Header */}
+        <div className="mb-12">
+          <h1 className="text-3xl font-semibold text-black mb-2">Agentic Research Model</h1>
+          <p className="text-gray-600 text-lg">AI-powered search and analysis tool</p>
+        </div>
 
-              {/* Desktop Actions */}
-              <div className="hidden md:flex gap-2">
-                <Button onClick={clearResults} disabled={isClearLoading} variant="ghost" size="sm" className="gap-2">
-                  {isClearLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <XIcon className="w-4 h-4" />}
-                  Clear Database
-                </Button>
+        {/* Database Toggle Button */}
+        <div className="mb-6">
+          <Button
+            type="button"
+            onClick={handleDatabaseToggle}
+            variant="outline"
+            className="border-gray-300 hover:bg-gray-50 text-gray-700 bg-transparent"
+            disabled={isSearching}
+          >
+            <Database className="w-4 h-4 mr-2" />
+            View Database
+            {isDatabaseOpen ? <ChevronUp className="w-4 h-4 ml-2" /> : <ChevronDown className="w-4 h-4 ml-2" />}
+          </Button>
+        </div>
+
+        {/* Database Results Section */}
+        <div
+          className={`overflow-hidden transition-all duration-300 ease-in-out mb-8 ${
+            isDatabaseOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+          }`}
+        >
+          <Card className="border border-gray-200 shadow-none">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg font-medium text-black">Database Results</CardTitle>
+                <div className="flex items-center gap-2">
+                  {databaseResults.length > 0 && (
+                    <Badge variant="secondary" className="bg-gray-100 text-gray-700">
+                      {databaseResults.length} results
+                    </Badge>
+                  )}
+                  <Button
+                    type="button"
+                    onClick={processDatabase}
+                    disabled={isProcessing || isLoadingDatabase}
+                    className="bg-gray-600 hover:bg-gray-700 text-white text-sm px-3 py-1 h-8"
+                  >
+                    {isProcessing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                        Processing...
+                      </>
+                    ) : (
+                      "Process"
+                    )}
+                  </Button>
+                  {hasProcessed && (
+                    <Button
+                      type="button"
+                      onClick={fetchCSVData}
+                      disabled={isLoadingCSV}
+                      className="bg-gray-600 hover:bg-gray-700 text-white text-sm px-3 py-1 h-8"
+                    >
+                      {isLoadingCSV ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                          Loading...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="w-4 h-4 mr-1" />
+                          View Data
+                        </>
+                      )}
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    onClick={() => setIsManualAddDialogOpen(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1 h-8"
+                  >
+                    Add URL
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleClearSession}
+                    disabled={isClearingSession || isLoadingDatabase}
+                    className="bg-red-600 hover:bg-red-700 text-white text-sm px-3 py-1 h-8"
+                  >
+                    {isClearingSession ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                        Clearing...
+                      </>
+                    ) : (
+                      "Clear All"
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={fetchAllResults}
+                    disabled={isLoadingDatabase}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    {isLoadingDatabase ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="max-h-80 overflow-y-auto">
+                {isLoadingDatabase ? (
+                  <div className="text-gray-500 text-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+                    Loading database results...
+                  </div>
+                ) : databaseResults.length === 0 ? (
+                  <div className="text-gray-500 text-center py-8">No results found in database</div>
+                ) : (
+                  <div className="divide-y divide-gray-200">
+                    {databaseResults.map((result) => (
+                      <div key={result.id} className="p-4 hover:bg-gray-50 transition-colors">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-medium text-black leading-tight">{result.title}</h3>
+                              <Badge variant="outline" className="text-xs text-gray-500 border-gray-300">
+                                ID: {result.id}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-gray-600 leading-relaxed">{result.snippet}</p>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                                {result.link ? new URL(result.link).hostname : "Unknown"}
+                              </span>
+                              <span className="text-xs text-gray-400">
+                                Query:{" "}
+                                {result.search_query.length > 50
+                                  ? `${result.search_query.substring(0, 50)}...`
+                                  : result.search_query}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              asChild
+                              className="flex-shrink-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                            >
+                              <a
+                                href={result.link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1"
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                              </a>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeResult(result.id)}
+                              className="flex-shrink-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* CSV Data Dialog */}
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent className="max-w-6xl max-h-[80vh] overflow-hidden">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-semibold text-black">Processed Data Results</DialogTitle>
+              <DialogDescription className="text-gray-600">
+                CSV data from the processed database results
+              </DialogDescription>
+            </DialogHeader>
+            <div className="overflow-auto max-h-[60vh]">
+              {csvData && (
+                <div className="border border-gray-200 rounded-md">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        {csvData.headers.map((header, index) => (
+                          <th
+                            key={index}
+                            className="px-3 py-2 text-left font-medium text-gray-700 border-r border-gray-200 last:border-r-0"
+                          >
+                            {header}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {csvData.rows.map((row, rowIndex) => (
+                        <tr key={rowIndex} className="hover:bg-gray-50">
+                          {row.map((cell, cellIndex) => (
+                            <td
+                              key={cellIndex}
+                              className="px-3 py-2 text-gray-700 border-r border-gray-200 last:border-r-0"
+                            >
+                              {cell === "-999" ? <span className="text-gray-400 italic">N/A</span> : cell}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end pt-4">
+              <Button
+                onClick={() => setIsDialogOpen(false)}
+                variant="outline"
+                className="border-gray-300 hover:bg-gray-50 text-gray-700"
+              >
+                Close
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Manual URL Addition Dialog */}
+        <Dialog open={isManualAddDialogOpen} onOpenChange={setIsManualAddDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-semibold text-black">Add Manual URL</DialogTitle>
+              <DialogDescription className="text-gray-600">
+                Enter a URL to manually add to the database
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Input
+                type="url"
+                placeholder="https://example.com/article"
+                value={manualUrl}
+                onChange={(e) => setManualUrl(e.target.value)}
+                className="text-sm border-gray-300 focus:border-gray-400 focus:ring-0 rounded-md"
+                disabled={isAddingManualUrl}
+              />
+
+              {manualAddResult && (
+                <div
+                  className={`p-3 rounded-md text-sm ${
+                    manualAddResult.message.includes("Error")
+                      ? "bg-red-50 text-red-700 border border-red-200"
+                      : "bg-green-50 text-green-700 border border-green-200"
+                  }`}
+                >
+                  <div className="font-medium mb-1">{manualAddResult.message}</div>
+                  {manualAddResult.result && (
+                    <div className="text-xs space-y-1">
+                      <div>
+                        <strong>Title:</strong> {manualAddResult.result.title || "N/A"}
+                      </div>
+                      <div>
+                        <strong>Snippet:</strong> {manualAddResult.result.snippet || "N/A"}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2">
                 <Button
                   onClick={() => {
-                    setShowGISModal(true)
-                    resetGISModal()
+                    setIsManualAddDialogOpen(false)
+                    setManualUrl("")
+                    setManualAddResult(null)
                   }}
-                  variant="ghost"
-                  size="sm"
-                  className="gap-2"
+                  variant="outline"
+                  className="border-gray-300 hover:bg-gray-50 text-gray-700"
+                  disabled={isAddingManualUrl}
                 >
-                  <MapPin className="w-4 h-4" />
-                  Geocode
+                  Cancel
+                </Button>
+                <Button
+                  onClick={addManualUrl}
+                  disabled={isAddingManualUrl || !manualUrl.trim()}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {isAddingManualUrl ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      Adding...
+                    </>
+                  ) : (
+                    "Add URL"
+                  )}
                 </Button>
               </div>
-
-              {/* Mobile Menu Button */}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="md:hidden"
-                onClick={() => setShowMobileMenu(!showMobileMenu)}
-              >
-                <Menu className="h-4 w-4" />
-              </Button>
             </div>
+          </DialogContent>
+        </Dialog>
 
-            <ClerkProvider>
-              <SignedOut>
-                <SignInButton>
-                  <Button variant="ghost" size="sm">
-                    Sign In
+        {/* Batch Search Dialog */}
+        <Dialog open={isBatchDialogOpen} onOpenChange={setIsBatchDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-semibold text-black">Batch Search</DialogTitle>
+              <DialogDescription className="text-gray-600">
+                Enter multiple search queries, one per line. Each query will be processed using the current methodology.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Textarea
+                value={batchQueries}
+                onChange={(e) => setBatchQueries(e.target.value)}
+                placeholder={`Enter search queries, one per line:
+quebrada blanca protests
+pascua lama mining conflicts
+antamina community opposition`}
+                className="min-h-[200px] text-sm border-gray-300 focus:border-gray-400 focus:ring-0 rounded-md resize-none"
+                disabled={isBatchProcessing}
+              />
+              <div className="flex justify-between items-center">
+                <div className="text-sm text-gray-500">
+                  {batchQueries.split("\n").filter((q) => q.trim().length > 0).length} queries
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => setIsBatchDialogOpen(false)}
+                    variant="outline"
+                    className="border-gray-300 hover:bg-gray-50 text-gray-700"
+                    disabled={isBatchProcessing}
+                  >
+                    Cancel
                   </Button>
-                </SignInButton>
-              </SignedOut>
-              <SignedIn>
-                <UserButton />
-              </SignedIn>
-            </ClerkProvider>
+                  <Button
+                    onClick={processBatchQueries}
+                    disabled={isBatchProcessing || !batchQueries.trim()}
+                    className="bg-gray-600 hover:bg-gray-700 text-white"
+                  >
+                    {isBatchProcessing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        Processing...
+                      </>
+                    ) : (
+                      "Process Batch"
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Search Form */}
+        <div className="mb-8 space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Globe className="w-5 h-5 text-gray-600" />
+            <h2 className="text-lg font-medium text-black">AI Search</h2>
           </div>
 
-          {/* Mobile Actions Menu */}
-          {showMobileMenu && (
-            <div className="md:hidden mt-4 pt-4 border-t border-gray-100 flex flex-col gap-2">
-              <Button
-                onClick={clearResults}
-                disabled={isClearLoading}
-                variant="ghost"
-                size="sm"
-                className="gap-2 justify-start"
-              >
-                {isClearLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <XIcon className="w-4 h-4" />}
-                Clear Database
-              </Button>
-              <Button
-                onClick={() => {
-                  setShowGISModal(true)
-                  resetGISModal()
-                  setShowMobileMenu(false)
-                }}
-                variant="ghost"
-                size="sm"
-                className="gap-2 justify-start"
-              >
-                <MapPin className="w-4 h-4" />
-                GIS Geocode
-              </Button>
-            </div>
-          )}
-        </div>
-      </nav>
-
-      <div className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 w-full">
-        {/* Header */}
-        <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Agentic Research Model</h1>
-          <p className="text-gray-600">AI-powered search and analysis tool</p>
-        </div>
-
-        {/* Search Bar */}
-        <form onSubmit={handleSubmit} className="mb-6 sm:mb-8">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="flex-1">
+          <form onSubmit={handleSubmit} className="flex gap-3">
+            <div className="flex-1 relative">
               <Input
                 type="text"
                 placeholder="Enter search query..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="h-12 text-base border-gray-200 focus:border-gray-900 focus:ring-gray-900"
+                className="h-11 text-base border-gray-300 focus:border-gray-400 focus:ring-0 rounded-md pr-12"
+                disabled={isSearching}
               />
-            </div>
-            <div className="flex gap-2">
               <Button
-                type="submit"
-                disabled={isLoading || !query.trim()}
-                className="h-12 px-4 sm:px-6 bg-gray-900 hover:bg-gray-800 text-white flex-1 sm:flex-none"
+                type="button"
+                onClick={() => setIsBatchDialogOpen(true)}
+                variant="ghost"
+                size="sm"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-9 w-9 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                disabled={isSearching}
               >
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                <span className="ml-2 sm:hidden">Search</span>
-              </Button>
-              <Button
-                onClick={fetchUrls}
-                disabled={isUrlsLoading}
-                variant="outline"
-                className="h-12 px-3 sm:px-4 border-gray-200 hover:bg-gray-50 bg-transparent"
-              >
-                {isUrlsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LinkIcon className="h-4 w-4" />}
-              </Button>
-              <Button
-                onClick={runExtract}
-                disabled={isExtractLoading}
-                variant="outline"
-                className="h-12 px-3 sm:px-4 border-gray-200 hover:bg-gray-50 bg-transparent"
-              >
-                {isExtractLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Map className="h-4 w-4" />}
+                <List className="w-4 h-4" />
               </Button>
             </div>
-          </div>
-        </form>
-
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-red-800 break-words">{error}</p>
-            </div>
-            <Button onClick={() => setError("")} variant="ghost" size="sm" className="h-6 w-6 p-0 flex-shrink-0">
-              <X className="h-4 w-4" />
+            <Button
+              type="button"
+              onClick={() => setIsMethodologyOpen(!isMethodologyOpen)}
+              variant="outline"
+              className="h-11 px-4 border-gray-300 hover:bg-gray-50 text-gray-700 rounded-md"
+              disabled={isSearching}
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              Methodology
+              {isMethodologyOpen ? <ChevronUp className="w-4 h-4 ml-2" /> : <ChevronDown className="w-4 h-4 ml-2" />}
             </Button>
-          </div>
-        )}
+            <Button
+              type="submit"
+              disabled={!query.trim() || isSearching}
+              className="h-11 px-6 bg-gray-600 hover:bg-gray-700 text-white rounded-md font-medium"
+            >
+              {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+            </Button>
+          </form>
 
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-2 sm:grid-cols-4 mb-6 sm:mb-8 bg-gray-100 p-1 rounded-lg w-full">
-            <TabsTrigger
-              value="current"
-              className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm text-sm"
-            >
-              <Search className="h-4 w-4" />
-              <span className="hidden sm:inline">Current</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="previous"
-              className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm text-sm"
-            >
-              <Clock className="h-4 w-4" />
-              <span className="hidden sm:inline">Database</span>
-              {activeTab === "previous" && isLoading && <Loader2 className="h-3 w-3 ml-1 animate-spin" />}
-            </TabsTrigger>
-            <TabsTrigger
-              value="methodology"
-              className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm text-sm"
-            >
-              <FileText className="h-4 w-4" />
-              <span className="hidden sm:inline">Methodology</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="files"
-              className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm text-sm"
-            >
-              <FolderIcon className="h-4 w-4" />
-              <span className="hidden sm:inline">Documents</span>
-              {activeTab === "files" && isFilesLoading && <Loader2 className="h-3 w-3 ml-1 animate-spin" />}
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="current">
-            <AnimatePresence mode="wait">
-              {isLoading ? (
-                <div className="flex justify-center items-center py-20">
-                  <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-                </div>
-              ) : currentResults.length > 0 ? (
+          {/* Methodology Editor - Rule-based XML system */}
+          <div
+            className={`overflow-hidden transition-all duration-300 ease-in-out ${
+              isMethodologyOpen ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
+            }`}
+          >
+            <Card className="border border-gray-200 shadow-none">
+              <CardContent className="p-4">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
-                      Results for "{query}" ({currentResults.length})
-                    </h2>
+                    <label className="text-sm font-medium text-gray-700">Research Methodology Rules</label>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={resetToDefault}
+                        className="text-xs text-gray-500 hover:text-gray-700 h-auto p-1"
+                      >
+                        Reset to default
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={addRule}
+                        className="text-xs border-gray-300 hover:bg-gray-50 text-gray-700 h-auto px-2 py-1 bg-transparent"
+                      >
+                        <Plus className="w-3 h-3 mr-1" />
+                        Add Rule
+                      </Button>
+                    </div>
                   </div>
-                  <div className="grid gap-3">
-                    {currentResults.map((result, index) => (
-                      <ResultCard key={index} result={result} onMethodologyClick={openMethodologyModal} />
+
+                  {/* Preset Buttons */}
+                  <div className="flex gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 mr-4">
+                      <BookOpen className="w-4 h-4 text-gray-500" />
+                      <span className="text-sm text-gray-600">Quick presets:</span>
+                    </div>
+                    {Object.entries(PRESETS).map(([key, value], index) => (
+                      <Button
+                        key={key}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePresetSelect(key as keyof typeof PRESETS)}
+                        className="text-xs border-gray-300 hover:bg-gray-50 text-gray-700"
+                        disabled={isSearching}
+                      >
+                        {PRESET_CATEGORIES[index]}
+                      </Button>
+                    ))}
+                  </div>
+
+                  {/* Rules Editor */}
+                  <div className="space-y-3 max-h-80 overflow-y-auto">
+                    {methodologyRules.map((rule) => (
+                      <div key={rule.id} className="border border-gray-200 rounded-md p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-gray-700">Rule {rule.id}</span>
+                          {methodologyRules.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeRule(rule.id)}
+                              className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <X className="w-3 h-3" />
+                            </Button>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <Input
+                            placeholder="Rule title (e.g., Goal, Relevance, Sources)"
+                            value={rule.title}
+                            onChange={(e) => updateRule(rule.id, "title", e.target.value)}
+                            className="text-sm border-gray-300 focus:border-gray-400 focus:ring-0 rounded-md"
+                            disabled={isSearching}
+                          />
+                          <Textarea
+                            placeholder="Rule content..."
+                            value={rule.content}
+                            onChange={(e) => updateRule(rule.id, "content", e.target.value)}
+                            className="min-h-[60px] text-sm border-gray-300 focus:border-gray-400 focus:ring-0 rounded-md resize-none"
+                            disabled={isSearching}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      onClick={() => setIsMethodologyOpen(false)}
+                      variant="outline"
+                      size="sm"
+                      className="text-sm border-gray-300 hover:bg-gray-50 text-gray-700"
+                    >
+                      Done
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* GDELT Search Form */}
+        <div className="mb-8 space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Globe className="w-5 h-5 text-gray-600" />
+            <h2 className="text-lg font-medium text-black">GDELT Search</h2>
+          </div>
+
+          <Card className="border border-gray-200 shadow-none">
+            <CardContent className="p-4">
+              <form onSubmit={handleGdeltSubmit} className="space-y-4">
+                {/* Search Input */}
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">Search Term</label>
+                  <Input
+                    type="text"
+                    placeholder="Enter search term (e.g., quebrada blanca)..."
+                    value={gdeltQuery}
+                    onChange={(e) => setGdeltQuery(e.target.value)}
+                    className="h-11 text-base border-gray-300 focus:border-gray-400 focus:ring-0 rounded-md"
+                    disabled={isGdeltSearching}
+                  />
+                </div>
+
+                {/* Countries Checkboxes */}
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">Countries</label>
+                  <div className="flex gap-4">
+                    {COUNTRIES.map((country) => (
+                      <div key={country.code} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={country.code}
+                          checked={selectedCountries.includes(country.code)}
+                          onCheckedChange={(checked) => handleCountryChange(country.code, checked as boolean)}
+                          disabled={isGdeltSearching}
+                        />
+                        <label htmlFor={country.code} className="text-sm text-gray-700 cursor-pointer select-none">
+                          {country.name}
+                        </label>
+                      </div>
                     ))}
                   </div>
                 </div>
-              ) : (
-                <div className="text-center py-20 text-gray-500">
-                  <div className="max-w-md mx-auto px-4">
-                    <p className="mb-4">
-                      Powered by <span className="font-semibold text-gray-900">Gemini 2.0 Flash</span> with Google
-                      Search grounding
-                    </p>
-                    <Link
-                      href="https://ai.google.dev/gemini-api/docs/grounding?lang=python"
-                      target="_blank"
-                      className="text-blue-600 hover:text-blue-800 underline"
-                    >
-                      Learn more about grounding
-                    </Link>
-                  </div>
-                </div>
-              )}
-            </AnimatePresence>
-          </TabsContent>
 
-          <TabsContent value="previous">
-            <AnimatePresence mode="wait">
-              {activeTab === "previous" && isLoading ? (
-                <div className="flex justify-center items-center py-20">
-                  <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-1">
-                        Search Database ({previousResults.length})
-                      </h2>
-                      <p className="text-gray-600">Previous searches with AI confidence scoring</p>
-                    </div>
-                  </div>
-                  {previousResults.length > 0 ? (
-                    <div className="grid gap-3">
-                      {[...previousResults].reverse().map((result, index) => (
-                        <ResultCard
-                          key={index}
-                          result={result}
-                          onDelete={deleteResult}
-                          isDeleting={deletingResults.has(result.url)}
-                          onMethodologyClick={openMethodologyModal}
+                {/* Keyword Types Checkboxes */}
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">Additional Keywords</label>
+                  <div className="flex gap-4">
+                    {KEYWORD_TYPES.map((keywordType) => (
+                      <div key={keywordType} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={keywordType}
+                          checked={selectedKeywordTypes.includes(keywordType)}
+                          onCheckedChange={(checked) => handleKeywordTypeChange(keywordType, checked as boolean)}
+                          disabled={isGdeltSearching}
                         />
+                        <label
+                          htmlFor={keywordType}
+                          className="text-sm text-gray-700 cursor-pointer select-none capitalize"
+                        >
+                          {keywordType}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Submit Button */}
+                <div className="flex justify-end">
+                  <Button
+                    type="submit"
+                    disabled={!gdeltQuery.trim() || selectedCountries.length === 0 || isGdeltSearching}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    {isGdeltSearching ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        Searching...
+                      </>
+                    ) : (
+                      <>
+                        <Globe className="w-4 h-4 mr-2" />
+                        Search GDELT
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+
+          {/* GDELT Results */}
+          {gdeltResults.length > 0 && (
+            <Card className="border border-gray-200 shadow-none">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg font-medium text-black">GDELT Results</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                      {gdeltResults.length} URLs found
+                    </Badge>
+                    {selectedGdeltResults.length > 0 && (
+                      <Badge variant="secondary" className="bg-green-100 text-green-700">
+                        {selectedGdeltResults.length} selected
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="max-h-80 overflow-y-auto">
+                  <div className="divide-y divide-gray-200">
+                    {gdeltResults.map((url, index) => (
+                      <div key={index} className="p-4 hover:bg-gray-50 transition-colors">
+                        <div className="flex items-center gap-4">
+                          <Checkbox
+                            id={`gdelt-${index}`}
+                            checked={selectedGdeltResults.includes(url)}
+                            onCheckedChange={(checked) => handleGdeltResultSelection(url, checked as boolean)}
+                            disabled={isAddingGdeltResults}
+                          />
+                          <div className="flex-1">
+                            <div className="text-sm text-gray-600 truncate">{url}</div>
+                            <div className="text-xs text-gray-400 mt-1">{url ? new URL(url).hostname : "Unknown"}</div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            asChild
+                            className="flex-shrink-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                          >
+                            <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
+                              <ExternalLink className="w-4 h-4" />
+                            </a>
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="p-4 border-t border-gray-200 bg-gray-50">
+                  <div className="flex justify-between items-center">
+                    <div className="text-sm text-gray-600">
+                      {selectedGdeltResults.length} of {gdeltResults.length} URLs selected
+                    </div>
+                    <Button
+                      onClick={addSelectedGdeltResults}
+                      disabled={selectedGdeltResults.length === 0 || isAddingGdeltResults}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      {isAddingGdeltResults ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          Adding to Database...
+                        </>
+                      ) : (
+                        <>
+                          <Database className="w-4 h-4 mr-2" />
+                          Add to Database ({selectedGdeltResults.length})
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Live Logs */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <Circle
+                className={`w-2 h-2 ${isSearching ? "fill-green-500 text-green-500" : "fill-gray-400 text-gray-400"}`}
+              />
+              <h2 className="text-lg font-medium text-black">Live Research Log</h2>
+            </div>
+
+            <Card className="border border-gray-200 shadow-none">
+              <CardContent className="p-0">
+                <div className="bg-gray-50 border-b border-gray-200 p-4 h-96 overflow-y-auto font-mono text-sm">
+                  {logs.length === 0 ? (
+                    <div className="text-gray-500 text-center mt-20">Enter a query and click search to begin</div>
+                  ) : (
+                    <div className="space-y-1">
+                      {logs.map((log, i) => (
+                        <div key={i} className="flex items-start gap-3 text-gray-700">
+                          <span className="flex-shrink-0 mt-0.5 text-gray-500">{getLogIcon(log)}</span>
+                          <span className="flex-1">{cleanLogText(log)}</span>
+                        </div>
                       ))}
+                      <div ref={logsEndRef} />
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Search Results */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <h2 className="text-lg font-medium text-black">Search Results</h2>
+              {searchResults.length > 0 && (
+                <Badge variant="secondary" className="bg-gray-100 text-gray-700 hover:bg-gray-100">
+                  {searchResults.length} results
+                </Badge>
+              )}
+            </div>
+
+            <Card className="border border-gray-200 shadow-none">
+              <CardContent className="p-0">
+                <div className="h-96 overflow-y-auto">
+                  {searchResults.length === 0 ? (
+                    <div className="text-gray-500 text-center mt-20 p-6">
+                      {isSearching ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Waiting for results...
+                        </div>
+                      ) : (
+                        "Results will appear here after research is complete"
+                      )}
                     </div>
                   ) : (
-                    <div className="text-center py-20 text-gray-500">No previous search results available.</div>
-                  )}
-                </div>
-              )}
-            </AnimatePresence>
-          </TabsContent>
-
-          <TabsContent value="methodology">
-            <div className="space-y-4 sm:space-y-6">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
-                <div>
-                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-1">Search Methodology</h2>
-                  <p className="text-gray-600">Configure search rules and parameters</p>
-                  {hasUnsavedChanges && isCustomMethodology(methodologyVersion) && (
-                    <p className="text-orange-600 text-sm mt-1 flex items-center gap-1">
-                      <Edit className="h-3 w-3" />
-                      You have unsaved changes
-                    </p>
-                  )}
-                </div>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                  <div className="text-sm text-gray-500 flex items-center">
-                    {isMethodologyLoading ? (
-                      <>
-                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                        Loading...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="h-3 w-3 mr-1" />
-                        {hasUnsavedChanges ? "Unsaved" : "Saved"}
-                      </>
-                    )}
-                  </div>
-                  <div className="flex gap-2 w-full sm:w-auto">
-                    <Button
-                      onClick={() => setShowCloneModal(true)}
-                      size="sm"
-                      variant="outline"
-                      className="border-gray-200 hover:bg-gray-50 flex-1 sm:flex-none"
-                    >
-                      <Copy className="h-4 w-4 mr-1" />
-                      Clone
-                    </Button>
-                    {isCustomMethodology(methodologyVersion) && (
-                      <Button
-                        onClick={saveCustomMethodology}
-                        disabled={isSaving || !hasUnsavedChanges}
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white flex-1 sm:flex-none"
-                      >
-                        {isSaving ? (
-                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                        ) : (
-                          <Check className="h-4 w-4 mr-1" />
-                        )}
-                        Save Changes
-                      </Button>
-                    )}
-                    <Button
-                      onClick={addRule}
-                      size="sm"
-                      className="bg-gray-900 hover:bg-gray-800 text-white flex-1 sm:flex-none"
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Add Rule
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Methodology Version Tabs */}
-              <div className="flex flex-wrap gap-2">
-                {/* Default presets */}
-                {[1, 2, 3].map((version) => (
-                  <Button
-                    key={version}
-                    onClick={() => setMethodologyVersion(version as 1 | 2 | 3)}
-                    variant={methodologyVersion === version ? "default" : "outline"}
-                    size="sm"
-                    className={
-                      methodologyVersion === version
-                        ? "bg-gray-900 hover:bg-gray-800 text-white"
-                        : "border-gray-200 hover:bg-gray-50"
-                    }
-                  >
-                    Preset {version}
-                  </Button>
-                ))}
-
-                {/* Custom methodologies */}
-                {customMethodologies.map((name) => (
-                  <div key={name} className="relative group">
-                    <Button
-                      onClick={() => setMethodologyVersion(name)}
-                      variant={methodologyVersion === name ? "default" : "outline"}
-                      size="sm"
-                      className={`
-      ${methodologyVersion === name
-                          ? "bg-blue-600 hover:bg-blue-700 text-white"
-                          : "border-blue-200 hover:bg-blue-50 text-blue-700"
-                        }
-      transition-all duration-200 group-hover:pr-8
-    `}
-                    >
-                      {name}
-                      {hasUnsavedChanges && methodologyVersion === name && (
-                        <span className="ml-1 w-1.5 h-1.5 bg-orange-400 rounded-full"></span>
-                      )}
-                    </Button>
-
-                    <Button
-                      onClick={() => deleteCustomMethodology(name)}
-                      variant="ghost"
-                      size="sm"
-                      className="
-      absolute right-1 top-1/2 -translate-y-1/2 
-      h-6 w-6 p-0
-      text-gray-300 hover:text-red-500
-      opacity-0 group-hover:opacity-100
-      translate-x-2 group-hover:translate-x-0
-      transition-all duration-200 ease-out
-      bg-transparent hover:bg-transparent shadow-none
-    "
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-
-                ))}
-              </div>
-
-              <div className="space-y-4">
-                {rules.map((rule, index) => (
-                  <div key={index} className="group p-4 border border-gray-200 rounded-lg">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-sm font-medium text-gray-500">Rule {index + 1}</span>
-                      {rules.length > 1 && (
-                        <Button
-                          onClick={() => removeRule(index)}
-                          variant="ghost"
-                          size="sm"
-                          className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-600 h-6 w-6 p-0"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      )}
-                    </div>
-                    <div className="space-y-3">
-                      <Input
-                        value={rule.title}
-                        onChange={(e) => updateRule(index, "title", e.target.value)}
-                        placeholder="Rule title..."
-                        className="border-gray-200 focus:border-gray-900 focus:ring-gray-900"
-                      />
-                      <Textarea
-                        value={rule.content}
-                        onChange={(e) => updateRule(index, "content", e.target.value)}
-                        placeholder="Rule description..."
-                        className="border-gray-200 focus:border-gray-900 focus:ring-gray-900 min-h-[80px] resize-none"
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <details className="group">
-                <summary className="text-sm font-medium text-gray-500 cursor-pointer hover:text-gray-700 transition-colors">
-                  XML Preview
-                </summary>
-                <pre className="mt-3 text-sm text-gray-600 font-mono bg-gray-50 p-4 rounded-lg border overflow-x-auto">
-                  {rulesToXML(rules)}
-                </pre>
-              </details>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="files">
-            <AnimatePresence mode="wait">
-              {activeTab === "files" && isFilesLoading ? (
-                <div className="flex justify-center items-center py-20">
-                  <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-                </div>
-              ) : (
-                <div className="space-y-4 sm:space-y-6">
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
-                    <div>
-                      <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-1">Document Library</h2>
-                      <p className="text-gray-600">Access research documents and PDFs</p>
-                    </div>
-                    <Button
-                      onClick={fetchFiles}
-                      size="sm"
-                      variant="outline"
-                      className="border-gray-200 hover:bg-gray-50 w-full sm:w-auto bg-transparent"
-                    >
-                      <Loader2 className={`h-4 w-4 mr-1 ${isFilesLoading ? "animate-spin" : "hidden"}`} />
-                      Refresh
-                    </Button>
-                  </div>
-
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    {fileSystem.length > 0 ? (
-                      <div className="space-y-1">{renderFileSystemItems(fileSystem)}</div>
-                    ) : (
-                      <div className="text-center py-10 text-gray-500">No documents available.</div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </AnimatePresence>
-          </TabsContent>
-        </Tabs>
-      </div>
-
-      {/* Clone Methodology Modal */}
-      <Dialog open={showCloneModal} onOpenChange={setShowCloneModal}>
-        <DialogContent className="max-w-md mx-4 sm:mx-auto">
-          <DialogHeader>
-            <DialogTitle className="text-gray-900 flex items-center gap-2">
-              <Copy className="h-5 w-5 text-blue-600" />
-              Clone Methodology
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <p className="text-sm text-gray-600 mb-3">
-                Create a custom copy of the current methodology that you can edit and save.
-              </p>
-              <Input
-                value={cloneName}
-                onChange={(e) => setCloneName(e.target.value)}
-                placeholder="Enter name for cloned methodology..."
-                className="border-gray-200 focus:border-gray-900 focus:ring-gray-900"
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowCloneModal(false)
-                  setCloneName("")
-                }}
-                className="border-gray-200 hover:bg-gray-50"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={cloneMethodology}
-                disabled={isCloning || !cloneName.trim()}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                {isCloning ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Copy className="h-4 w-4 mr-1" />}
-                Clone
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modals with mobile-friendly sizing */}
-      <Dialog open={showUrlsModal} onOpenChange={setShowUrlsModal}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto mx-4 sm:mx-auto">
-          <DialogHeader>
-            <DialogTitle className="text-gray-900">Grounded URLs</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            {urlsList.map((url, index) => (
-              <div key={index} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-mono text-gray-600">#{index + 1}</span>
-                  <Button variant="ghost" size="sm" onClick={() => window.open(url, "_blank")} className="gap-2">
-                    <LinkIcon className="h-3 w-3" />
-                    Open
-                  </Button>
-                </div>
-                <a
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-800 break-all text-sm"
-                >
-                  {url}
-                </a>
-              </div>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showPdfModal} onOpenChange={setShowPdfModal}>
-        <DialogContent className="max-w-5xl max-h-[90vh] p-0 overflow-hidden mx-4 sm:mx-auto">
-          <DialogHeader className="p-4 border-b">
-            <DialogTitle className="text-gray-900 pr-8 truncate">
-              {selectedFile && formatFilename(selectedFile)}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="h-[70vh] sm:h-[80vh]">
-            {selectedFile && (
-              <iframe
-                src={`${baseUrl}/pdf?name=${encodeURIComponent(selectedFile)}`}
-                className="w-full h-full border-0"
-                title={selectedFile}
-              />
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showGISModal} onOpenChange={setShowGISModal}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
-          <DialogHeader>
-            <DialogTitle className="text-gray-900 flex items-center gap-2">
-              <MapPin className="h-5 w-5" />
-              GIS Geocoding Service
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-6">
-            <form onSubmit={handleGISSubmit} className="flex flex-col sm:flex-row gap-2">
-              <Input
-                type="text"
-                placeholder="Enter location (e.g., Hillcrest Mall)"
-                value={gisQuery}
-                onChange={(e) => setGisQuery(e.target.value)}
-                className="border-gray-200 focus:border-gray-900 focus:ring-gray-900 flex-1"
-              />
-              <Button
-                type="submit"
-                disabled={isGISLoading || !gisQuery.trim()}
-                className="bg-gray-900 hover:bg-gray-800 text-white w-full sm:w-auto"
-              >
-                {isGISLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                <span className="ml-2 sm:hidden">Search</span>
-              </Button>
-            </form>
-
-            {gisError && (
-              <Alert className="border-red-200 bg-red-50">
-                <AlertCircle className="h-4 w-4 text-red-600" />
-                <AlertDescription className="text-red-700">{gisError}</AlertDescription>
-              </Alert>
-            )}
-
-            {gisData && (
-              <div className="space-y-4">
-                <div className="text-lg font-semibold text-gray-900">Results for "{gisData.query}"</div>
-
-                {/* Location Data */}
-                {hasValidLocationData(gisData) && (
-                  <Card className="border-gray-200">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-blue-700">
-                        <Navigation className="h-5 w-5" />
-                        Location Information
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <div className="text-sm font-medium text-gray-600">Full Name</div>
-                          <div className="text-gray-900 break-words">{gisData.location_data.name}</div>
-                        </div>
-                        {gisData.location_data.source && (
-                          <div>
-                            <div className="text-sm font-medium text-gray-600">Source</div>
-                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                              {gisData.location_data.source}
-                            </Badge>
-                          </div>
-                        )}
-                        <div>
-                          <div className="text-sm font-medium text-gray-600">Latitude</div>
-                          <div className="text-gray-900 font-mono text-sm">{gisData.location_data.lat!.toFixed(7)}</div>
-                        </div>
-                        <div>
-                          <div className="text-sm font-medium text-gray-600">Longitude</div>
-                          <div className="text-gray-900 font-mono text-sm">{gisData.location_data.lon!.toFixed(7)}</div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Administrative Data */}
-                {hasAdministrativeData(gisData) && (
-                  <Card className="border-gray-200">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-purple-700">
-                        <Building className="h-5 w-5" />
-                        Administrative Information
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {Object.entries(gisData.administrative_data).map(([key, value]) => {
-                          if (!value || value.trim() === "") return null
-                          return (
-                            <div key={key}>
-                              <div className="text-sm font-medium text-gray-600 capitalize">
-                                {key.replace(/[-_]/g, " ").replace("ISO3166-2-lvl4", "ISO Code")}
+                    <div className="divide-y divide-gray-200">
+                      {searchResults.map((result, i) => (
+                        <div key={i} className="p-4 hover:bg-gray-50 transition-colors">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 space-y-2">
+                              <h3 className="font-medium text-black leading-tight">{result.title}</h3>
+                              <p className="text-sm text-gray-600 leading-relaxed">{result.snippet}</p>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                                  {result.url ? new URL(result.url).hostname : "Unknown"}
+                                </span>
                               </div>
-                              <div className="text-gray-900 break-words">{value}</div>
                             </div>
-                          )
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Nearby Communities */}
-                {gisData.nearby_communities.length > 0 && (
-                  <Card className="border-gray-200">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-orange-700">
-                        <Globe className="h-5 w-5" />
-                        Nearby Communities ({gisData.nearby_communities.length})
-                      </CardTitle>
-                      <CardDescription>Communities in the surrounding area</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {gisData.nearby_communities.map((community, index) => (
-                          <div
-                            key={index}
-                            className="p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
-                          >
-                            <div className="font-medium text-gray-900 break-words">{community.name}</div>
-                            <div className="text-xs text-gray-600 font-mono mt-1">
-                              {community.lat.toFixed(6)}, {community.lon.toFixed(6)}
-                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              asChild
+                              className="flex-shrink-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                            >
+                              <a
+                                href={result.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1"
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                              </a>
+                            </Button>
                           </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            )}
-
-            {isGISLoading && (
-              <div className="flex justify-center items-center py-10">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-              </div>
-            )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Methodology Modal */}
-      <Dialog open={showMethodologyModal} onOpenChange={setShowMethodologyModal}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden mx-4 sm:mx-auto">
-          <DialogHeader className="pb-4 border-b border-gray-200">
-            <DialogTitle className="text-gray-900 flex items-center gap-2">
-              <Code className="h-5 w-5 text-blue-600" />
-              Exact Methodology Used
-            </DialogTitle>
-          </DialogHeader>
-          <div className="overflow-y-auto max-h-[70vh]">
-            <div className="p-4">
-              <div className="bg-none rounded-lg p-4 overflow-x-auto">
-                <XMLViewer
-                  xml={selectedMethodology}
-                  indentSize={2}
-                  // When the xml is invalid, invalidXml component will be displayed.
-                  // Default: <div>Invalid XML!</div>
-                  invalidXml={<div>Invalid XML!</div>}
-                  // Displays line numbers on the left side when set to true.
-                  // Default: false
-                  showLineNumbers={true}
-                />
-              </div>
-            </div>
-          </div>
-          <div className="flex justify-end gap-2 pt-4 border-t border-gray-200">
-            <Button
-              variant="outline"
-              onClick={() => {
-                navigator.clipboard.writeText(selectedMethodology)
-              }}
-              className="gap-2"
-            >
-              <Code className="h-4 w-4" />
-              Copy XML
-            </Button>
-            <Button onClick={() => setShowMethodologyModal(false)} className="bg-gray-900 hover:bg-gray-800">
-              Close
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Footer - Sticky to bottom */}
-      <footer className="border-t border-gray-100 bg-gray-50 py-4 sm:py-6 mt-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center text-sm text-gray-500">
-          Summer 2025 PEA Tool by Miller Ding for Dr. P. Haslam & Dr. N. Ary
         </div>
-      </footer>
+      </div>
     </div>
-  )
-}
-
-// Function to extract domain from URL
-const extractDomain = (url: string) => {
-  try {
-    const domain = new URL(url).hostname
-    return domain.replace("www.", "")
-  } catch {
-    return url
-  }
-}
-
-// Function to get confidence level styling
-const getConfidenceStyle = (confidence: string) => {
-  const confidenceNum = Number.parseFloat(confidence) * 100
-  if (confidenceNum >= 80) {
-    return {
-      color: "text-green-700",
-      bg: "bg-green-50",
-      border: "border-green-200",
-      icon: Star,
-    }
-  } else if (confidenceNum >= 60) {
-    return {
-      color: "text-blue-700",
-      bg: "bg-blue-50",
-      border: "border-blue-200",
-      icon: TrendingUp,
-    }
-  } else {
-    return {
-      color: "text-orange-700",
-      bg: "bg-orange-50",
-      border: "border-orange-200",
-      icon: AlertCircle,
-    }
-  }
-}
-
-function ResultCard({
-  result,
-  onDelete,
-  isDeleting,
-  onMethodologyClick,
-}: {
-  result: SearchResult
-  onDelete?: (url: string) => void
-  isDeleting?: boolean
-  onMethodologyClick?: (methodology: string, title: string) => void
-}) {
-  const confidenceStyle = getConfidenceStyle(result.confidence)
-  const ConfidenceIcon = confidenceStyle.icon
-  const confidencePercentage = Math.round(Number.parseFloat(result.confidence) * 100)
-
-  return (
-    <Card className="border-gray-200">
-      <CardHeader className="space-y-1">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base sm:text-lg font-semibold text-gray-900 break-words">{result.title}</CardTitle>
-          {onDelete && (
-            <Button
-              onClick={() => onDelete(result.url)}
-              disabled={isDeleting}
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 text-gray-400 hover:text-red-600"
-            >
-              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-            </Button>
-          )}
-        </div>
-        <CardDescription className="text-sm text-gray-500 break-words">
-          <Link href={result.url} target="_blank" className="hover:underline">
-            {extractDomain(result.url)}
-          </Link>
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-3">
-        <div className="flex items-center gap-2">
-          <Badge className={`${confidenceStyle.bg} ${confidenceStyle.color} ${confidenceStyle.border} text-xs`}>
-            <ConfidenceIcon className="h-3 w-3 mr-1" />
-            {confidencePercentage}% Confidence
-          </Badge>
-          {result.lang && (
-            <Badge variant="outline" className="text-xs">
-              {result.lang.toUpperCase()}
-            </Badge>
-          )}
-        </div>
-        <div className="flex items-center justify-between">
-          <div className="text-xs text-gray-600 flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            Accessed on {new Date().toLocaleDateString()}
-          </div>
-          {onMethodologyClick && (
-            <Button
-              onClick={() => onMethodologyClick(result.methodology || "", result.title)}
-              variant="ghost"
-              size="sm"
-              className="gap-2"
-            >
-              <Code className="h-3 w-3" />
-              Methodology
-            </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
   )
 }
