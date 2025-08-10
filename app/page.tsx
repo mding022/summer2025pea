@@ -29,8 +29,8 @@ import {
   Globe,
 } from "lucide-react"
 
-const BASE_URL = "http://localhost:8000"
-// const BASE_URL = "https://s25api.millerding.com"
+// const BASE_URL = "http://localhost:8000"
+const BASE_URL = "https://s25api.millerding.com"
 
 interface SearchResult {
   url: string
