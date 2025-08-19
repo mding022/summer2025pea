@@ -6,8 +6,8 @@ import { ThemeProvider } from "@/components/theme-provider"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata = {
-  title: "Summer 2025 PEA Search Agent",
-  description: "By Miller Ding for Prof. Paul Haslam & Prof. Nasser Ary. 2025.",
+  title: "Protest Event, Institutional Demand, Institutional Response (PEIDIR) Agential Research Model",
+  description: "Protest Event, Institutional Demand, Institutional Response (PEIDIR) Agential Research Model from Professor Haslam.",
 }
 
 export default function RootLayout({
