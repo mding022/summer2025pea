@@ -27,6 +27,8 @@ import {
   Plus,
   X,
   Globe,
+  FolderOpen,
+  Download,
 } from "lucide-react"
 
 // const BASE_URL = "http://localhost:8000"
@@ -185,11 +187,14 @@ export default function Home() {
   const [methodologyRules, setMethodologyRules] = useState<Rule[]>(DEFAULT_METHODOLOGY_RULES)
   const [isMethodologyOpen, setIsMethodologyOpen] = useState(false)
   const [isDatabaseOpen, setIsDatabaseOpen] = useState(false)
+  const [isDriveOpen, setIsDriveOpen] = useState(false)
   const [logs, setLogs] = useState<string[]>([])
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [databaseResults, setDatabaseResults] = useState<DatabaseResult[]>([])
+  const [driveFiles, setDriveFiles] = useState<string[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [isLoadingDatabase, setIsLoadingDatabase] = useState(false)
+  const [isLoadingDrive, setIsLoadingDrive] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [hasProcessed, setHasProcessed] = useState(false)
   const [csvData, setCsvData] = useState<CSVData | null>(null)
@@ -215,6 +220,11 @@ export default function Home() {
   const [isGdeltSearching, setIsGdeltSearching] = useState(false)
   const [selectedGdeltResults, setSelectedGdeltResults] = useState<string[]>([])
   const [isAddingGdeltResults, setIsAddingGdeltResults] = useState(false)
+
+  // PDF Viewer State
+  const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false)
+  const [currentPdfUrl, setCurrentPdfUrl] = useState("")
+  const [currentPdfName, setCurrentPdfName] = useState("")
 
   const scrollToBottom = () => {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -295,11 +305,52 @@ export default function Home() {
     rules.forEach((rule) => {
       xml += `  <rule id="${rule.id}">\n`
       xml += `    <title>${rule.title}</title>\n`
-      xml += `    <content>${rule.content}</content>\n`
+      xml += `    <content>${rule.content}</title>\n`
       xml += `  </rule>\n`
     })
     xml += "</methodology>"
     return xml
+  }
+
+  // Fetch drive files
+  const fetchDriveFiles = async () => {
+    setIsLoadingDrive(true)
+    try {
+      const response = await fetch(`${BASE_URL}/files`, {
+        credentials: "include",
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const files = await response.json()
+      setDriveFiles(files)
+    } catch (error) {
+      console.error("Failed to fetch drive files:", error)
+    } finally {
+      setIsLoadingDrive(false)
+    }
+  }
+
+  // Open PDF viewer
+  const openPdf = (fileName: string) => {
+    const pdfUrl = `${BASE_URL}/pdf?name=${encodeURIComponent(fileName)}`
+    setCurrentPdfUrl(pdfUrl)
+    setCurrentPdfName(fileName)
+    setIsPdfDialogOpen(true)
+  }
+
+  // Download PDF
+  const downloadPdf = () => {
+    if (currentPdfUrl && currentPdfName) {
+      const link = document.createElement("a")
+      link.href = currentPdfUrl
+      link.download = currentPdfName
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
   }
 
   // Update these functions in your Next.js component:
@@ -716,8 +767,21 @@ export default function Home() {
 
   const handleDatabaseToggle = () => {
     setIsDatabaseOpen(!isDatabaseOpen)
+    if (isDriveOpen) {
+      setIsDriveOpen(false)
+    }
     if (!isDatabaseOpen && databaseResults.length === 0) {
       fetchAllResults()
+    }
+  }
+
+  const handleDriveToggle = () => {
+    setIsDriveOpen(!isDriveOpen)
+    if (isDatabaseOpen) {
+      setIsDatabaseOpen(false)
+    }
+    if (!isDriveOpen && driveFiles.length === 0) {
+      fetchDriveFiles()
     }
   }
 
@@ -778,17 +842,36 @@ export default function Home() {
     return log.replace(/^[⏳🚀🤖🔍📨🏁❌✅]\s*/u, "")
   }
 
+  const formatFileName = (fileName: string) => {
+    // Remove file extension and decode URL encoding
+    const nameWithoutExt = fileName.replace(".pdf", "")
+    const decoded = decodeURIComponent(nameWithoutExt)
+
+    // Extract meaningful parts
+    const parts = decoded.split("/")
+    const actualFileName = parts[parts.length - 1]
+
+    // If there's a folder structure, show the folder name
+    if (parts.length > 1 && parts[0] !== "Unknown" && parts[0] !== "not_specified") {
+      return `${parts[0]}/${actualFileName}`
+    }
+
+    return actualFileName
+  }
+
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-7xl mx-auto px-6 py-12">
         {/* Header */}
         <div className="mb-12">
           <h1 className="text-3xl font-semibold text-black mb-2">PEIDIR Research Model</h1>
-          <p className="text-gray-600 text-lg">Protest Event, Institutional Demand, Institutional Response (PEIDIR) Agential Research Model</p>
+          <p className="text-gray-600 text-lg">
+            Protest Event, Institutional Demand, Institutional Response (PEIDIR) Agential Research Model
+          </p>
         </div>
 
-        {/* Database Toggle Button */}
-        <div className="mb-6">
+        {/* Database and Drive Toggle Buttons */}
+        <div className="mb-6 flex gap-3">
           <Button
             type="button"
             onClick={handleDatabaseToggle}
@@ -799,6 +882,17 @@ export default function Home() {
             <Database className="w-4 h-4 mr-2" />
             View Database
             {isDatabaseOpen ? <ChevronUp className="w-4 h-4 ml-2" /> : <ChevronDown className="w-4 h-4 ml-2" />}
+          </Button>
+          <Button
+            type="button"
+            onClick={handleDriveToggle}
+            variant="outline"
+            className="border-gray-300 hover:bg-gray-50 text-gray-700 bg-transparent"
+            disabled={isSearching}
+          >
+            <FolderOpen className="w-4 h-4 mr-2" />
+            View Drive
+            {isDriveOpen ? <ChevronUp className="w-4 h-4 ml-2" /> : <ChevronDown className="w-4 h-4 ml-2" />}
           </Button>
         </div>
 
@@ -960,6 +1054,174 @@ export default function Home() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Drive Files Section */}
+        <div
+          className={`overflow-hidden transition-all duration-300 ease-in-out mb-8 ${
+            isDriveOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+          }`}
+        >
+          <Card className="border border-gray-200 shadow-none">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg font-medium text-black">Drive Files</CardTitle>
+                <div className="flex items-center gap-2">
+                  {driveFiles.length > 0 && (
+                    <Badge variant="secondary" className="bg-gray-100 text-gray-700">
+                      {driveFiles.length} files
+                    </Badge>
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={fetchDriveFiles}
+                    disabled={isLoadingDrive}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    {isLoadingDrive ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="max-h-80 overflow-y-auto">
+                {isLoadingDrive ? (
+                  <div className="text-gray-500 text-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+                    Loading drive files...
+                  </div>
+                ) : driveFiles.length === 0 ? (
+                  <div className="text-gray-500 text-center py-8">No files found in drive</div>
+                ) : (
+                  <div>
+                    {(() => {
+                      // Group files by folder
+                      const groupedFiles = driveFiles.reduce(
+                        (groups, fileName) => {
+                          const parts = fileName.split("/")
+                          let folderName = "Root"
+
+                          if (parts.length > 1 && parts[0] !== "Unknown" && parts[0] !== "not_specified") {
+                            folderName = parts[0]
+                          }
+
+                          if (!groups[folderName]) {
+                            groups[folderName] = []
+                          }
+                          groups[folderName].push(fileName)
+                          return groups
+                        },
+                        {} as Record<string, string[]>,
+                      )
+
+                      // Sort folders, with "Root" last
+                      const sortedFolders = Object.keys(groupedFiles).sort((a, b) => {
+                        if (a === "Root") return 1
+                        if (b === "Root") return -1
+                        return a.localeCompare(b)
+                      })
+
+                      return sortedFolders.map((folderName, folderIndex) => (
+                        <div key={folderName}>
+                          {/* Folder Header */}
+                          {folderName !== "Root" && (
+                            <div className="bg-gray-100 px-4 py-2 border-b border-gray-200 sticky top-0 z-10">
+                              <div className="flex items-center gap-2">
+                                <FolderOpen className="w-4 h-4 text-gray-600" />
+                                <span className="font-medium text-gray-800">{folderName}</span>
+                                <Badge variant="outline" className="text-xs text-gray-500 border-gray-300">
+                                  {groupedFiles[folderName].length} files
+                                </Badge>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Files in folder */}
+                          <div className={folderName !== "Root" ? "bg-gray-50/50" : ""}>
+                            {groupedFiles[folderName].map((fileName, fileIndex) => (
+                              <div
+                                key={fileName}
+                                className={`p-4 hover:bg-gray-100 transition-colors border-b border-gray-100 last:border-b-0 ${
+                                  folderName !== "Root" ? "pl-8" : ""
+                                }`}
+                              >
+                                <div className="flex items-center justify-between gap-4">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <FileText className="w-4 h-4 text-red-500" />
+                                      <h3 className="font-medium text-black leading-tight">
+                                        {(() => {
+                                          const nameWithoutExt = fileName.replace(".pdf", "")
+                                          const decoded = decodeURIComponent(nameWithoutExt)
+                                          const parts = decoded.split("/")
+                                          return parts[parts.length - 1]
+                                        })()}
+                                      </h3>
+                                    </div>
+                                    <div className="text-xs text-gray-400 mt-1 ml-6">{fileName}</div>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => openPdf(fileName)}
+                                    className="flex-shrink-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                                  >
+                                    <ExternalLink className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))
+                    })()}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* PDF Viewer Dialog */}
+        <Dialog open={isPdfDialogOpen} onOpenChange={setIsPdfDialogOpen}>
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
+            <DialogHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <DialogTitle className="text-xl font-semibold text-black">PDF Viewer</DialogTitle>
+                  <DialogDescription className="text-gray-600">{formatFileName(currentPdfName)}</DialogDescription>
+                </div>
+                <Button
+                  onClick={downloadPdf}
+                  variant="outline"
+                  className="border-gray-300 hover:bg-gray-50 text-gray-700 bg-transparent"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download
+                </Button>
+              </div>
+            </DialogHeader>
+            <div className="overflow-auto max-h-[75vh]">
+              {currentPdfUrl && (
+                <iframe
+                  src={currentPdfUrl}
+                  className="w-full h-[70vh] border border-gray-200 rounded-md"
+                  title="PDF Viewer"
+                />
+              )}
+            </div>
+            <div className="flex justify-end pt-4">
+              <Button
+                onClick={() => setIsPdfDialogOpen(false)}
+                variant="outline"
+                className="border-gray-300 hover:bg-gray-50 text-gray-700"
+              >
+                Close
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* CSV Data Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
