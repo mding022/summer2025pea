@@ -31,8 +31,8 @@ import {
   Download,
 } from "lucide-react"
 
-// const BASE_URL = "http://localhost:8000"
-const BASE_URL = "https://s25api.millerding.com"
+const BASE_URL = "http://localhost:8000"
+// const BASE_URL = "https://s25api.millerding.com"
 
 interface SearchResult {
   url: string
@@ -211,6 +211,11 @@ export default function Home() {
   const [manualUrl, setManualUrl] = useState("")
   const [isAddingManualUrl, setIsAddingManualUrl] = useState(false)
   const [manualAddResult, setManualAddResult] = useState<{ message: string; result?: any } | null>(null)
+
+  const [isManualAddPdfDialogOpen, setIsManualAddPdfDialogOpen] = useState(false)
+  const [selectedPdfFile, setSelectedPdfFile] = useState<File | null>(null)
+  const [isUploadingPdf, setIsUploadingPdf] = useState(false)
+  const [pdfUploadResult, setPdfUploadResult] = useState<{ message: string; result?: any } | null>(null)
 
   // GDELT Search State
   const [gdeltQuery, setGdeltQuery] = useState("")
@@ -525,6 +530,43 @@ export default function Home() {
       })
     } finally {
       setIsAddingManualUrl(false)
+    }
+  }
+
+  const addManualPdf = async () => {
+    if (!selectedPdfFile) return
+
+    setIsUploadingPdf(true)
+    setPdfUploadResult(null)
+
+    try {
+      const formData = new FormData()
+      formData.append("file", selectedPdfFile)
+
+      const response = await fetch(`${BASE_URL}/add_manual_pdf`, {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      setPdfUploadResult(data)
+      setSelectedPdfFile(null)
+
+      // Refresh database results if they're currently displayed
+      if (isDatabaseOpen) {
+        fetchAllResults()
+      }
+    } catch (error) {
+      setPdfUploadResult({
+        message: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+      })
+    } finally {
+      setIsUploadingPdf(false)
     }
   }
 
@@ -956,6 +998,13 @@ export default function Home() {
                   </Button>
                   <Button
                     type="button"
+                    onClick={() => setIsManualAddPdfDialogOpen(true)}
+                    className="bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1 h-8"
+                  >
+                    Add PDF
+                  </Button>
+                  <Button
+                    type="button"
                     onClick={handleClearSession}
                     disabled={isClearingSession || isLoadingDatabase}
                     className="bg-red-600 hover:bg-red-700 text-white text-sm px-3 py-1 h-8"
@@ -1344,6 +1393,88 @@ export default function Home() {
                     </>
                   ) : (
                     "Add URL"
+                  )}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Manual PDF Upload Dialog */}
+        <Dialog open={isManualAddPdfDialogOpen} onOpenChange={setIsManualAddPdfDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-semibold text-black">Upload PDF</DialogTitle>
+              <DialogDescription className="text-gray-600">
+                Select a PDF file to upload and add to the database
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => setSelectedPdfFile(e.target.files?.[0] || null)}
+                  className="hidden"
+                  id="pdf-upload"
+                  disabled={isUploadingPdf}
+                />
+                <label htmlFor="pdf-upload" className="cursor-pointer flex flex-col items-center gap-2">
+                  <FileText className="w-8 h-8 text-gray-400" />
+                  <span className="text-sm text-gray-600">
+                    {selectedPdfFile ? selectedPdfFile.name : "Click to select PDF file"}
+                  </span>
+                  <span className="text-xs text-gray-400">PDF files only</span>
+                </label>
+              </div>
+
+              {pdfUploadResult && (
+                <div
+                  className={`p-3 rounded-md text-sm ${
+                    pdfUploadResult.message.includes("Error")
+                      ? "bg-red-50 text-red-700 border border-red-200"
+                      : "bg-green-50 text-green-700 border border-green-200"
+                  }`}
+                >
+                  <div className="font-medium mb-1">{pdfUploadResult.message}</div>
+                  {pdfUploadResult.result && (
+                    <div className="text-xs space-y-1">
+                      <div>
+                        <strong>Title:</strong> {pdfUploadResult.result.title || "N/A"}
+                      </div>
+                      <div>
+                        <strong>Snippet:</strong> {pdfUploadResult.result.snippet || "N/A"}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  onClick={() => {
+                    setIsManualAddPdfDialogOpen(false)
+                    setSelectedPdfFile(null)
+                    setPdfUploadResult(null)
+                  }}
+                  variant="outline"
+                  className="border-gray-300 hover:bg-gray-50 text-gray-700"
+                  disabled={isUploadingPdf}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={addManualPdf}
+                  disabled={isUploadingPdf || !selectedPdfFile}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {isUploadingPdf ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      Uploading...
+                    </>
+                  ) : (
+                    "Upload PDF"
                   )}
                 </Button>
               </div>
