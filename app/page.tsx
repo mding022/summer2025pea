@@ -1059,7 +1059,28 @@ export default function Home() {
                             <p className="text-sm text-gray-600 leading-relaxed">{result.snippet}</p>
                             <div className="flex items-center gap-2">
                               <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                                {result.link ? new URL(result.link).hostname : "Unknown"}
+                                {(() => {
+                                  try {
+                                    // Check if it's a PDF file path
+                                    if (result.link && result.link.includes(".pdf")) {
+                                      // Extract meaningful info from PDF path
+                                      const fileName = result.link.split("/").pop() || result.link
+                                      const cleanName = fileName.replace(".pdf", "")
+
+                                      // Try to extract domain from filename
+                                      const parts = cleanName.split("_")
+                                      if (parts.length > 0 && parts[0].includes(".")) {
+                                        return `PDF: ${parts[0]}`
+                                      }
+                                      return "PDF File"
+                                    }
+
+                                    // Regular URL handling
+                                    return new URL(result.link).hostname
+                                  } catch {
+                                    return result.link && result.link.includes(".pdf") ? "PDF File" : "Unknown"
+                                  }
+                                })()}
                               </span>
                               <span className="text-xs text-gray-400">
                                 Query:{" "}
@@ -1073,17 +1094,21 @@ export default function Home() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              asChild
+                              onClick={() => {
+                                if (result.link && result.link.includes(".pdf")) {
+                                  // Open PDF viewer for PDF files
+                                  const pdfUrl = `${BASE_URL}/pdf?name=${encodeURIComponent(result.link.replace("cache_pdfs/", ""))}`
+                                  setCurrentPdfUrl(pdfUrl)
+                                  setCurrentPdfName(result.link)
+                                  setIsPdfDialogOpen(true)
+                                } else {
+                                  // Open external link for regular URLs
+                                  window.open(result.link, "_blank", "noopener,noreferrer")
+                                }
+                              }}
                               className="flex-shrink-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                             >
-                              <a
-                                href={result.link}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-1"
-                              >
-                                <ExternalLink className="w-4 h-4" />
-                              </a>
+                              <ExternalLink className="w-4 h-4" />
                             </Button>
                             <Button
                               variant="ghost"
