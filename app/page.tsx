@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Checkbox } from "@/components/ui/checkbox"
+import { Slider } from "@/components/ui/slider"
 import {
   Search,
   ExternalLink,
@@ -29,6 +29,7 @@ import {
   Globe,
   FolderOpen,
   Download,
+  Calendar,
 } from "lucide-react"
 
 // const BASE_URL = "http://localhost:8000"
@@ -106,11 +107,6 @@ const PRESETS = {
       content:
         "First, search for results on these websites. olca.cl, and www.minesandcommunities.org. After, search for results on these websites only after the previous searches do not provide enough results, by using multiple OR statements. The domains are:\nhttps://www.lanacion.com.ar/\nhttps://www.clarin.com/\nhttps://www.larazon.es/\nhttps://www.cronista.com/\nhttps://www.diariouno.com.ar/\nhttps://www.diarioregistrado.com/\nhttps://www.minutouno.com/\nhttp://www.nochepolar.com/\nhttps://www.ambito.com/\nhttps://noticiasargentinas.com/\nhttps://www.perfil.com/\nhttps://www.pagina12.com.ar/\nhttps://www.lacuarta.com/temas/argentina/\nhttps://elsigloweb.com/\nhttps://www.lun.com/\nhttps://www.elancasti.com.ar/\nhttps://www.elesquiu.com/\nhttps://www.diariodecuyo.com.ar/\nhttps://www.tiempodesanjuan.com/\nhttps://www.tiemposur.com.ar/\nhttps://www.eltribuno.com/\nhttps://www.anred.org/\nhttps://palpalainforma.com/\nhttps://www.copenoa.com.ar/\nhttps://latinta.com.ar/\nhttps://elresaltador.com.ar/\nhttps://enredaccion.com.ar/\nhttps://argentina.indymedia.org/\nhttps://periodicas.com.ar/\nhttps://www.tiempoar.com.ar/\nhttps://suresnoticias.com.ar/\nhttps://www.cordobatimes.com/\nhttps://www.ocmal.org/\nhttps://olca.cl/oca/index.php\nhttps://www.minesandcommunities.org/\nhttps://www.redlatinoamericanademujeres.org/\nhttps://www.aomaosam.org.ar/aoma/\nhttps://www.argentina.gob.ar/justicia/institucional\nhttps://www.argentina.gob.ar/capital-humano/trabajo\nhttps://noalamina.org/\nhttps://concienciasolidaria.org.ar/es/\nhttps://asambleasdecomunidades.org.ar/\nhttps://miningpress.com/\nhttps://enernews.com/\nhttps://www.panorama-minero.com\nhttps://huellaminera.com/\nhttps://www.mining.com/\nhttps://www.mining-journal.com/\nhttps://im-mining.com/\nhttps://www.mch.cl/\nhttps://energiminas.com/\nhttps://www.portalminero.com/\nhttps://www.bnamericas.com/",
     },
-    {
-      id: "6",
-      title: "Time Period",
-      content: "Only search for content related to events that occurred within the time period of 2002 to 2019.",
-    },
   ],
   preset2: [
     {
@@ -136,11 +132,6 @@ const PRESETS = {
       content:
         "Keywords describing complaints include: claim / demand / accusation (denuncia); regulatory claim (denuncia ante las autoridades / reclamación ante las autoridades); formal claim (reclamo formal / presentación ante autoridades); queja (complaint); claim of pollution (denuncia de contaminación); claim of spill (denuncia de derrame); environmental crime (delito ambiental).\n\nKeywords describing legal complaints include: violation of rights (violación de derechos); abuse of rights (abuso de derechos); lack of respect for rights (falta de respeto por los derechos); right to prior consultation (derecho a la consulta previa); right to water (derecho al agua); right to a clean environment (derecho a un medio ambiente limpio); protection (amparo); constitutional protection appeal (recurso de amparo); judicial submission (demanda judicial / querella); criminal complaint (denuncia penal); precautionary measure (cautelar / medida cautelar); appeal for unconstitutionality (recurso de inconstitucionalidad); appeal (recurso de apelación / revisión / casación); class action (acción colectiva); strategic litigation (litigio estratégico); judicial presentation (presentación judicial); petition (petición); counterclaim (reconvención); legal remedy (recurso); motion for clarification (recurso de aclaración); administrative appeal (recurso de alzada); motion for reconsideration (recurso de reposición); appeal for reconsideration (recurso de súplica); demand (requerimiento); litigation (pleito); question (interpelación).",
     },
-    {
-      id: "5",
-      title: "Time Period",
-      content: "Only search for demands or complaints that occurred within the time period of 2002 to 2019.",
-    },
   ],
   preset3: [
     {
@@ -165,11 +156,6 @@ const PRESETS = {
       title: "Keywords to Search For",
       content:
         "Keywords describing institutional responses by regulatory agencies include: environmental inspection (inspección ambiental); mitigation (mitigación); pasivo ambiental (environmental liability); plan de contingencia (contingency plan); environmental audit (auditoría ambiental); final disposition (disposición final); monitoring (monitoreo); certificate (acta / resolución); administrative act (acto administrativo); arbitration (arbitraje); public consultation (audiencia pública / consulta pública); workshop (mesa de trabajo); encumbrance / charge (gravamen); fine (multa); restoration (restauración); environmental clean-up (saneamiento ambiental); revocation of environmental licence (revocación de licencia ambiental / revocación de resolución de calificación ambiental); formulation of charges (formulación de cargos); compliance program (programa de cumplimiento); contaminants criteria (contaminantes criterio); environmental monitoring (fiscalización ambiental); temporary measures (medidas providenciales); self-reporting (autodenuncia); noncompliance (incumplimiento); mining protection (amparo minero); environmental certificate (certificación ambiental); environmental management audit (auditoría de gestión ambiental); polluted area (zona saturada).\n\nKeywords describing institutional responses by the courts include: arbitration award (laudo); nullity of proceedings (nulidad de actuaciones); invitation to take legal action (ofrecimiento de acciones); enabling (habilitación); preliminary ruling (prejudicial); prescription (prescripción); breach (quebramiento); breach of sentence (quebramiento de condena); procedural irregularity / breach of procedure (quebramiento de forma); cessation (casación); precautionary measure (medida cautelar); withdrawal (desistimiento); decree (decreto); edict (edicto); ruling (fallo); final ruling / final judgement (firme).",
-    },
-    {
-      id: "5",
-      title: "Time Period",
-      content: "Only search for institutional responses that occurred within the time period of 2002 to 2019.",
     },
   ],
 }
@@ -230,6 +216,12 @@ export default function Home() {
   const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false)
   const [currentPdfUrl, setCurrentPdfUrl] = useState("")
   const [currentPdfName, setCurrentPdfName] = useState("")
+
+  // Preset Selection State
+  const [selectedPreset, setSelectedPreset] = useState<keyof typeof PRESETS | null>(null)
+
+  // Time Period State
+  const [timeRange, setTimeRange] = useState<[number, number]>([2002, 2019])
 
   const scrollToBottom = () => {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -310,9 +302,14 @@ export default function Home() {
     rules.forEach((rule) => {
       xml += `  <rule id="${rule.id}">\n`
       xml += `    <title>${rule.title}</title>\n`
-      xml += `    <content>${rule.content}</title>\n`
+      xml += `    <content>${rule.content}</content>\n`
       xml += `  </rule>\n`
     })
+    // Add time period rule
+    xml += `  <rule id="time_period">\n`
+    xml += `    <title>Time Period</title>\n`
+    xml += `    <content>The time period to search in is between ${timeRange[0]} and ${timeRange[1]}.</content>\n`
+    xml += `  </rule>\n`
     xml += "</methodology>"
     return xml
   }
@@ -805,6 +802,7 @@ export default function Home() {
 
   const handlePresetSelect = (presetKey: keyof typeof PRESETS) => {
     setMethodologyRules(PRESETS[presetKey])
+    setSelectedPreset(presetKey)
   }
 
   const handleDatabaseToggle = () => {
@@ -858,6 +856,7 @@ export default function Home() {
 
   const resetToDefault = () => {
     setMethodologyRules(DEFAULT_METHODOLOGY_RULES)
+    setSelectedPreset(null)
   }
 
   useEffect(() => {
@@ -908,7 +907,7 @@ export default function Home() {
         <div className="mb-12">
           <h1 className="text-3xl font-semibold text-black mb-2">PEIDIR Research Model</h1>
           <p className="text-gray-600 text-lg">
-            Protest Event, Institutional Demand, Institutional Response (PEIDIR) Agential Research Model
+            Protest Events, Institutional Demands, Institutional Responses (PEIDIR) Agential Research Model
           </p>
         </div>
 
@@ -1611,7 +1610,7 @@ antamina community opposition`}
           {/* Methodology Editor - Rule-based XML system */}
           <div
             className={`overflow-hidden transition-all duration-300 ease-in-out ${
-              isMethodologyOpen ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
+              isMethodologyOpen ? "max-h-[800px] opacity-100" : "max-h-0 opacity-0"
             }`}
           >
             <Card className="border border-gray-200 shadow-none">
@@ -1655,7 +1654,9 @@ antamina community opposition`}
                         variant="outline"
                         size="sm"
                         onClick={() => handlePresetSelect(key as keyof typeof PRESETS)}
-                        className="text-xs border-gray-300 hover:bg-gray-50 text-gray-700"
+                        className={`text-xs border-gray-300 hover:bg-gray-50 text-gray-700 ${
+                          selectedPreset === key ? "bg-blue-50 border-blue-300 text-blue-700" : ""
+                        }`}
                         disabled={isSearching}
                       >
                         {PRESET_CATEGORIES[index]}
@@ -1664,7 +1665,7 @@ antamina community opposition`}
                   </div>
 
                   {/* Rules Editor */}
-                  <div className="space-y-3 max-h-80 overflow-y-auto">
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
                     {methodologyRules.map((rule) => (
                       <div key={rule.id} className="border border-gray-200 rounded-md p-3 space-y-2">
                         <div className="flex items-center justify-between">
@@ -1701,6 +1702,43 @@ antamina community opposition`}
                     ))}
                   </div>
 
+                  {/* Time Period Rule - Global and Non-editable */}
+                  <div className="border-2 border-blue-200 bg-blue-50/30 rounded-md p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-blue-600" />
+                      <span className="text-sm font-medium text-gray-700">Time Period (Global Rule)</span>
+                      <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-xs">
+                        Required
+                      </Badge>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between text-sm text-gray-600">
+                        <span className="font-medium">{timeRange[0]}</span>
+                        <span className="text-xs text-gray-500">to</span>
+                        <span className="font-medium">{timeRange[1]}</span>
+                      </div>
+                      <Slider
+                        value={timeRange}
+                        onValueChange={(value) => setTimeRange(value as [number, number])}
+                        min={2002}
+                        max={2025}
+                        step={1}
+                        minStepsBetweenThumbs={1}
+                        className="w-full"
+                        disabled={isSearching}
+                      >
+                      </Slider>
+
+                      <div className="flex justify-between text-xs text-gray-500">
+                        <span>2002</span>
+                        <span>2025</span>
+                      </div>
+                      <p className="text-xs text-gray-600 italic">
+                        Search results will be limited to events between {timeRange[0]} and {timeRange[1]}.
+                      </p>
+                    </div>
+                  </div>
+
                   <div className="flex justify-end">
                     <Button
                       type="button"
@@ -1717,7 +1755,6 @@ antamina community opposition`}
             </Card>
           </div>
         </div>
-
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Live Logs */}
