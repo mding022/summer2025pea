@@ -33,7 +33,11 @@ import {
   GripVertical,
   ArrowUp,
   ArrowDown,
+  BarChart3,
 } from "lucide-react"
+
+// Import necessary charting components
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts"
 
 // const BASE_URL = "http://localhost:8000"
 const BASE_URL = "https://s25api.millerding.com"
@@ -55,6 +59,22 @@ interface DatabaseResult {
 interface CSVData {
   headers: string[]
   rows: string[][]
+}
+
+interface VolumeDataPoint {
+  date: string
+  value: number
+}
+
+interface VolumeResponse {
+  query_details: {
+    title: string
+    date_resolution: string
+  }
+  timeline: Array<{
+    series: string
+    data: VolumeDataPoint[]
+  }>
 }
 
 interface Rule {
@@ -243,6 +263,12 @@ export default function Home() {
   const [isMethodologyOpen, setIsMethodologyOpen] = useState(false)
   const [isDatabaseOpen, setIsDatabaseOpen] = useState(false)
   const [isDriveOpen, setIsDriveOpen] = useState(false)
+  const [isVolumeOpen, setIsVolumeOpen] = useState(false)
+  const [volumeQuery, setVolumeQuery] = useState("")
+  const [volumeData, setVolumeData] = useState<VolumeDataPoint[]>([])
+  const [volumeQueryTitle, setVolumeQueryTitle] = useState("")
+  const [isLoadingVolume, setIsLoadingVolume] = useState(false)
+
   const [logs, setLogs] = useState<string[]>([])
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [databaseResults, setDatabaseResults] = useState<DatabaseResult[]>([])
@@ -869,6 +895,9 @@ export default function Home() {
     if (isDriveOpen) {
       setIsDriveOpen(false)
     }
+    if (isVolumeOpen) {
+      setIsVolumeOpen(false)
+    }
     if (!isDatabaseOpen && databaseResults.length === 0) {
       fetchAllResults()
     }
@@ -879,24 +908,21 @@ export default function Home() {
     if (isDatabaseOpen) {
       setIsDatabaseOpen(false)
     }
+    if (isVolumeOpen) {
+      setIsVolumeOpen(false)
+    }
     if (!isDriveOpen && driveFiles.length === 0) {
       fetchDriveFiles()
     }
   }
 
-  const handleCountryChange = (countryCode: string, checked: boolean) => {
-    if (checked) {
-      setSelectedCountries([...selectedCountries, countryCode])
-    } else {
-      setSelectedCountries(selectedCountries.filter((c) => c !== countryCode))
+  const handleVolumeToggle = () => {
+    setIsVolumeOpen(!isVolumeOpen)
+    if (isDatabaseOpen) {
+      setIsDatabaseOpen(false)
     }
-  }
-
-  const handleKeywordTypeChange = (keywordType: string, checked: boolean) => {
-    if (checked) {
-      setSelectedKeywordTypes([...selectedKeywordTypes, keywordType])
-    } else {
-      setSelectedKeywordTypes(selectedKeywordTypes.filter((k) => k !== keywordType))
+    if (isDriveOpen) {
+      setIsDriveOpen(false)
     }
   }
 
@@ -949,6 +975,54 @@ export default function Home() {
     setDataParams(parseDataParams(DEFAULT_DATA_PARAMS))
   }
 
+  const fetchVolumeData = async () => {
+    if (!volumeQuery.trim()) return
+
+    setIsLoadingVolume(true)
+    try {
+      const apiUrl = `https://api.gdeltproject.org/api/v2/doc/doc?format=json&timespan=FULL&query=${encodeURIComponent(volumeQuery.trim())}&mode=timelinevol&timezoom=yes`
+
+      const response = await fetch(apiUrl)
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data: VolumeResponse = await response.json()
+
+      if (data.timeline && data.timeline.length > 0) {
+        setVolumeData(data.timeline[0].data)
+        setVolumeQueryTitle(data.query_details.title)
+      }
+    } catch (error) {
+      console.error("Failed to fetch volume data:", error)
+      setVolumeData([])
+    } finally {
+      setIsLoadingVolume(false)
+    }
+  }
+
+  const handleVolumeSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    fetchVolumeData()
+  }
+
+  const formatVolumeDate = (dateStr: string) => {
+    try {
+      const year = dateStr.substring(0, 4)
+      const month = dateStr.substring(4, 6)
+      const day = dateStr.substring(6, 8)
+      return `${year}-${month}-${day}`
+    } catch {
+      return dateStr
+    }
+  }
+
+  const chartData = volumeData.map((point) => ({
+    date: formatVolumeDate(point.date),
+    value: point.value,
+  }))
+
   useEffect(() => {
     return () => {
       if (abortControllerRef.current) {
@@ -990,6 +1064,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-7xl mx-auto px-6 py-12">
+        {/* Header */}
         <div className="mb-12">
           <h1 className="text-3xl font-semibold text-black mb-2">PEIDIR Research Model</h1>
           <p className="text-gray-600 text-lg">
@@ -997,6 +1072,7 @@ export default function Home() {
           </p>
         </div>
 
+        {/* Database and Drive Toggle Buttons */}
         <div className="mb-6 flex gap-3">
           <Button
             type="button"
@@ -1020,8 +1096,20 @@ export default function Home() {
             View Drive
             {isDriveOpen ? <ChevronUp className="w-4 h-4 ml-2" /> : <ChevronDown className="w-4 h-4 ml-2" />}
           </Button>
+          <Button
+            type="button"
+            onClick={handleVolumeToggle}
+            variant="outline"
+            className="border-gray-300 hover:bg-gray-50 text-gray-700 bg-transparent"
+            disabled={isSearching}
+          >
+            <BarChart3 className="w-4 h-4 mr-2" />
+            Volume Analysis
+            {isVolumeOpen ? <ChevronUp className="w-4 h-4 ml-2" /> : <ChevronDown className="w-4 h-4 ml-2" />}
+          </Button>
         </div>
 
+        {/* Database Results Section */}
         <div
           className={`overflow-hidden transition-all duration-300 ease-in-out mb-8 ${
             isDatabaseOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
@@ -1206,6 +1294,7 @@ export default function Home() {
           </Card>
         </div>
 
+        {/* Drive Files Section */}
         <div
           className={`overflow-hidden transition-all duration-300 ease-in-out mb-8 ${
             isDriveOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
@@ -1325,6 +1414,104 @@ export default function Home() {
                   </div>
                 )}
               </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div
+          className={`overflow-hidden transition-all duration-300 ease-in-out mb-8 ${
+            isVolumeOpen ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
+          }`}
+        >
+          <Card className="border border-gray-200 shadow-none">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-medium text-black">Volume Analysis</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <form onSubmit={handleVolumeSubmit} className="flex gap-3">
+                <Input
+                  type="text"
+                  placeholder="query for volume analysis"
+                  value={volumeQuery}
+                  onChange={(e) => setVolumeQuery(e.target.value)}
+                  className="flex-1 text-sm border-gray-300 focus:border-gray-400 focus:ring-0 rounded-md"
+                  disabled={isLoadingVolume}
+                />
+                <Button
+                  type="submit"
+                  disabled={!volumeQuery.trim() || isLoadingVolume}
+                  className="bg-gray-600 hover:bg-gray-700 text-white"
+                >
+                  {isLoadingVolume ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      Loading...
+                    </>
+                  ) : (
+                    <>
+                      <Search className="w-4 h-4 mr-2" />
+                      Analyze
+                    </>
+                  )}
+                </Button>
+              </form>
+
+              {volumeData.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-medium text-gray-700">Timeline for: {volumeQueryTitle}</h3>
+                    <Badge variant="secondary" className="bg-gray-100 text-gray-700">
+                      {volumeData.length} data points
+                    </Badge>
+                  </div>
+
+                  <div className="h-80 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 60 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis
+                          dataKey="date"
+                          angle={-45}
+                          textAnchor="end"
+                          height={80}
+                          tick={{ fontSize: 10, fill: "#6b7280" }}
+                          stroke="#9ca3af"
+                        />
+                        <YAxis
+                          tick={{ fontSize: 12, fill: "#6b7280" }}
+                          stroke="#9ca3af"
+                          label={{
+                            value: "Volume Intensity",
+                            angle: -90,
+                            position: "insideLeft",
+                            style: { fill: "#6b7280" },
+                          }}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "white",
+                            border: "1px solid #e5e7eb",
+                            borderRadius: "6px",
+                            fontSize: "12px",
+                          }}
+                          labelStyle={{ color: "#374151", fontWeight: 500 }}
+                        />
+                        <Bar dataKey="value" fill="#4b5563" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )}
+
+              {!isLoadingVolume && volumeData.length === 0 && volumeQuery && (
+                <div className="text-center py-8 text-gray-500">No volume data found for this query</div>
+              )}
+
+              {!volumeQuery && (
+                <div className="text-center py-8 text-gray-500">
+                  Enter a search query to analyze volume trends over time
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
