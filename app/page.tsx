@@ -30,6 +30,9 @@ import {
   FolderOpen,
   Download,
   Calendar,
+  GripVertical,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react"
 
 // const BASE_URL = "http://localhost:8000"
@@ -60,6 +63,12 @@ interface Rule {
   content: string
 }
 
+interface DataParam {
+  id: string
+  name: string
+  description: string
+}
+
 const DEFAULT_METHODOLOGY_RULES: Rule[] = [
   {
     id: "1",
@@ -79,6 +88,66 @@ const DEFAULT_METHODOLOGY_RULES: Rule[] = [
       "Focus on these domains first. If there is not enough relevant information, open the search to more domains: https://noalamina.org/, https://olca.cl/oca/index.php, https://www.minesandcommunities.org/",
   },
 ]
+
+const DEFAULT_DATA_PARAMS = `company: the name of the company identified in the report
+date: news report date, in format (YYYY/MM/DD)
+country: the country where the protest occurred
+admin1: first-level administrative division (e.g., state, province) where the protest occurred
+admin2: second-level administrative division (e.g., county, district) where the protest occurred
+municipality: municipality where the protest occurred
+start_date: start date of the protest (YYYY/MM/DD), or -999 if unknown
+end_date: end date of the protest (YYYY/MM/DD), or -999 if unknown
+type: 1 = march/demonstration, 2 = employees' strike, 3 = roadblock, 4 = occupation of offices/property, 5 = assembly/meeting/plenary, 6 = presentation of letter/document/press release, 7 = complaint to regulatory authorities/courts, -999 = unknown
+type_change: 0 = no change; if changed, use same codes as "type"
+actor1: 1 = neighborhood group, 2 = farmers/agricultural org, 3 = small businesses/business org, 4 = indigenous org, 5 = environmental org, 6 = human rights org, 7 = state employees, 8 = union, 9 = students, 10 = religious org, 12 = political party, 11 = other
+actor2: same codes as actor1, or -999 if none
+actor3: same codes as actor1, or -999 if none
+multi_sector: 1 = coalition or >3 organizations, 0 = only 1–2 organizations
+capital_city_orgs: number of capital city–based civil society organizations involved (0 if none)
+intl_orgs: number of internationally based civil society organizations involved (0 if none)
+church_support: 1 if a church supported protesters, 0 if not
+municipal_support: 1 if municipal authorities supported protesters, 0 if not
+org_names: names of civil society organizations involved, or -999 if none
+target1: 1 = company, 2 = municipal gov, 3 = regional/provincial gov, 4 = central/federal gov, 5 = regulatory agencies, 6 = judiciary/courts, 7 = police/military, 8 = foreign gov, 9 = other
+target2: same codes as target1, or -999 if none
+target3: same codes as target1, or -999 if none
+target_names: names of targeted organizations/institutions
+issue1: 1 = economic/jobs, 2 = agricultural livelihoods, 3 = environment, 4 = public services, 5 = justice/legal system, 6 = aboriginal rights, 7 = corruption, 9 = access to info on mining project, 8 = other
+issue2: same codes as issue1, or -999 if none
+issue3: same codes as issue1, or -999 if none
+issues_list: list of all issues mentioned as important to protesters in the report
+participants: 1 = <10, 2 = 10–100, 3 = 101–1,000, 4 = 1,001–10,000, 5 = 10,001–100,000, 6 = >100,000, -999 = unknown
+hurt: number of people hurt (0 if none mentioned)
+arrested: number of people arrested (0 if none mentioned)
+property_damage: 0 = none, 1 = minor, 2 = moderate, 3 = major
+protest_end: 1 = dispersed/unknown, 2 = peacefully broken up, 3 = violently broken up, 4 = agreement to negotiate later, 5 = concessions offered
+violence_against: 0 = none, 1 = private security, 2 = police, 3 = military, 4 = opposing political group/gang, 5 = paramilitary
+women_led: 1 = led by women's organizations, 0 = not led by them, -999 = unknown`
+
+const parseDataParams = (text: string): DataParam[] => {
+  return text
+    .split("\n")
+    .filter((line) => line.trim())
+    .map((line, index) => {
+      const colonIndex = line.indexOf(":")
+      if (colonIndex === -1) {
+        return {
+          id: `param-${index}`,
+          name: line.trim(),
+          description: "",
+        }
+      }
+      return {
+        id: `param-${index}`,
+        name: line.substring(0, colonIndex).trim(),
+        description: line.substring(colonIndex + 1).trim(),
+      }
+    })
+}
+
+const dataParamsToText = (params: DataParam[]): string => {
+  return params.map((param) => `${param.name}: ${param.description}`).join("\n")
+}
 
 const PRESET_CATEGORIES = ["Protest Events", "Institutional Demands", "Institutional Responses"]
 
@@ -203,7 +272,6 @@ export default function Home() {
   const [isUploadingPdf, setIsUploadingPdf] = useState(false)
   const [pdfUploadResult, setPdfUploadResult] = useState<{ message: string; result?: any } | null>(null)
 
-  // GDELT Search State
   const [gdeltQuery, setGdeltQuery] = useState("")
   const [selectedCountries, setSelectedCountries] = useState<string[]>([])
   const [selectedKeywordTypes, setSelectedKeywordTypes] = useState<string[]>([])
@@ -212,16 +280,16 @@ export default function Home() {
   const [selectedGdeltResults, setSelectedGdeltResults] = useState<string[]>([])
   const [isAddingGdeltResults, setIsAddingGdeltResults] = useState(false)
 
-  // PDF Viewer State
   const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false)
   const [currentPdfUrl, setCurrentPdfUrl] = useState("")
   const [currentPdfName, setCurrentPdfName] = useState("")
 
-  // Preset Selection State
   const [selectedPreset, setSelectedPreset] = useState<keyof typeof PRESETS | null>(null)
 
-  // Time Period State
   const [timeRange, setTimeRange] = useState<[number, number]>([2002, 2019])
+
+  const [dataParams, setDataParams] = useState<DataParam[]>(() => parseDataParams(DEFAULT_DATA_PARAMS))
+  const [isDataParamsDialogOpen, setIsDataParamsDialogOpen] = useState(false)
 
   const scrollToBottom = () => {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -244,7 +312,7 @@ export default function Home() {
         const nextChar = line[i + 1]
 
         if (char === '"' && inQuotes && nextChar === '"') {
-          current += '"' // escaped quote
+          current += '"'
           i++
         } else if (char === '"') {
           inQuotes = !inQuotes
@@ -305,7 +373,6 @@ export default function Home() {
       xml += `    <content>${rule.content}</content>\n`
       xml += `  </rule>\n`
     })
-    // Add time period rule
     xml += `  <rule id="time_period">\n`
     xml += `    <title>Time Period</title>\n`
     xml += `    <content>The time period to search in is between ${timeRange[0]} and ${timeRange[1]}.</content>\n`
@@ -314,7 +381,6 @@ export default function Home() {
     return xml
   }
 
-  // Fetch drive files
   const fetchDriveFiles = async () => {
     setIsLoadingDrive(true)
     try {
@@ -335,7 +401,6 @@ export default function Home() {
     }
   }
 
-  // Open PDF viewer
   const openPdf = (fileName: string) => {
     const pdfUrl = `${BASE_URL}/pdf?name=${encodeURIComponent(fileName)}`
     setCurrentPdfUrl(pdfUrl)
@@ -343,7 +408,6 @@ export default function Home() {
     setIsPdfDialogOpen(true)
   }
 
-  // Download PDF
   const downloadPdf = () => {
     if (currentPdfUrl && currentPdfName) {
       const link = document.createElement("a")
@@ -355,15 +419,12 @@ export default function Home() {
     }
   }
 
-  // Update these functions in your Next.js component:
-
-  // 1. Fix fetchAllResults function
   const fetchAllResults = async () => {
     setIsLoadingDatabase(true)
     try {
       const baseUrl = BASE_URL
       const response = await fetch(`${baseUrl}/all-search-results`, {
-        credentials: "include", // Add this line
+        credentials: "include",
       })
 
       if (!response.ok) {
@@ -379,13 +440,12 @@ export default function Home() {
     }
   }
 
-  // 2. Fix removeResult function
   const removeResult = async (resultId: number) => {
     try {
       const baseUrl = BASE_URL
       const response = await fetch(`${baseUrl}/remove/${resultId}`, {
         method: "DELETE",
-        credentials: "include", // Add this line
+        credentials: "include",
       })
 
       if (!response.ok) {
@@ -412,7 +472,6 @@ export default function Home() {
       const data = await response.json()
       console.log(data.message)
 
-      // Clear the local state
       setDatabaseResults([])
 
       return data
@@ -430,7 +489,6 @@ export default function Home() {
     setIsClearingSession(true)
     try {
       const result = await clearSessionResults()
-      // Optionally show success message
       console.log(`Cleared ${result.deleted_count} results from session ${result.session_id}`)
     } catch (error) {
       console.error("Failed to clear session results:", error)
@@ -439,17 +497,25 @@ export default function Home() {
     }
   }
 
-  // 3. Fix processDatabase function
   const processDatabase = async () => {
+    setIsDataParamsDialogOpen(true)
+  }
+
+  const processWithDataParams = async () => {
     setIsProcessing(true)
     try {
       const baseUrl = BASE_URL
+      const dataParamsText = dataParamsToText(dataParams)
+
       const response = await fetch(`${baseUrl}/process`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: "include", // Add this line
+        credentials: "include",
+        body: JSON.stringify({
+          data_params: dataParamsText,
+        }),
       })
 
       if (!response.ok) {
@@ -457,6 +523,7 @@ export default function Home() {
       }
 
       setHasProcessed(true)
+      setIsDataParamsDialogOpen(false)
       console.log("Database processed successfully")
     } catch (error) {
       console.error("Failed to process database:", error)
@@ -465,13 +532,12 @@ export default function Home() {
     }
   }
 
-  // 4. Fix fetchCSVData function
   const fetchCSVData = async () => {
     setIsLoadingCSV(true)
     try {
       const baseUrl = BASE_URL
       const response = await fetch(`${baseUrl}/resultscsv`, {
-        credentials: "include", // Add this line
+        credentials: "include",
       })
 
       if (!response.ok) {
@@ -489,7 +555,6 @@ export default function Home() {
     }
   }
 
-  // 5. Fix addManualUrl function
   const addManualUrl = async () => {
     if (!manualUrl.trim()) return
 
@@ -506,7 +571,7 @@ export default function Home() {
         body: JSON.stringify({
           url: manualUrl.trim(),
         }),
-        credentials: "include", // Add this line
+        credentials: "include",
       })
 
       if (!response.ok) {
@@ -517,7 +582,6 @@ export default function Home() {
       setManualAddResult(data)
       setManualUrl("")
 
-      // Refresh database results if they're currently displayed
       if (isDatabaseOpen) {
         fetchAllResults()
       }
@@ -554,7 +618,6 @@ export default function Home() {
       setPdfUploadResult(data)
       setSelectedPdfFile(null)
 
-      // Refresh database results if they're currently displayed
       if (isDatabaseOpen) {
         fetchAllResults()
       }
@@ -611,10 +674,8 @@ export default function Home() {
 
       console.log(`Added ${successCount} URLs successfully, ${errorCount} failed`)
 
-      // Clear selections after adding
       setSelectedGdeltResults([])
 
-      // Refresh database results if they're currently displayed
       if (isDatabaseOpen) {
         fetchAllResults()
       }
@@ -625,7 +686,6 @@ export default function Home() {
     }
   }
 
-  // 6. Fix processBatchQueries function (if you have a batch endpoint)
   const processBatchQueries = async () => {
     const queries = batchQueries
       .split("\n")
@@ -650,7 +710,7 @@ export default function Home() {
           queries: queries,
           methodology: methodologyXML,
         }),
-        credentials: "include", // Add this line
+        credentials: "include",
       })
 
       if (!response.ok) {
@@ -660,7 +720,6 @@ export default function Home() {
       console.log("Batch queries processed successfully")
       setIsBatchDialogOpen(false)
       setBatchQueries("")
-      // Optionally refresh the database results
       if (isDatabaseOpen) {
         fetchAllResults()
       }
@@ -760,7 +819,7 @@ export default function Home() {
 
     setIsGdeltSearching(true)
     setGdeltResults([])
-    setSelectedGdeltResults([]) // Clear previous selections
+    setSelectedGdeltResults([])
 
     try {
       const keywords = [gdeltQuery.trim(), ...selectedKeywordTypes]
@@ -859,6 +918,37 @@ export default function Home() {
     setSelectedPreset(null)
   }
 
+  const moveParamUp = (index: number) => {
+    if (index === 0) return
+    const newParams = [...dataParams]
+    ;[newParams[index - 1], newParams[index]] = [newParams[index], newParams[index - 1]]
+    setDataParams(newParams)
+  }
+
+  const moveParamDown = (index: number) => {
+    if (index === dataParams.length - 1) return
+    const newParams = [...dataParams]
+    ;[newParams[index], newParams[index + 1]] = [newParams[index + 1], newParams[index]]
+    setDataParams(newParams)
+  }
+
+  const deleteParam = (id: string) => {
+    setDataParams(dataParams.filter((param) => param.id !== id))
+  }
+
+  const updateParam = (id: string, field: "name" | "description", value: string) => {
+    setDataParams(dataParams.map((param) => (param.id === id ? { ...param, [field]: value } : param)))
+  }
+
+  const addParam = () => {
+    const newId = `param-${Date.now()}`
+    setDataParams([...dataParams, { id: newId, name: "", description: "" }])
+  }
+
+  const resetDataParams = () => {
+    setDataParams(parseDataParams(DEFAULT_DATA_PARAMS))
+  }
+
   useEffect(() => {
     return () => {
       if (abortControllerRef.current) {
@@ -884,15 +974,12 @@ export default function Home() {
   }
 
   const formatFileName = (fileName: string) => {
-    // Remove file extension and decode URL encoding
     const nameWithoutExt = fileName.replace(".pdf", "")
     const decoded = decodeURIComponent(nameWithoutExt)
 
-    // Extract meaningful parts
     const parts = decoded.split("/")
     const actualFileName = parts[parts.length - 1]
 
-    // If there's a folder structure, show the folder name
     if (parts.length > 1 && parts[0] !== "Unknown" && parts[0] !== "not_specified") {
       return `${parts[0]}/${actualFileName}`
     }
@@ -903,7 +990,6 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-7xl mx-auto px-6 py-12">
-        {/* Header */}
         <div className="mb-12">
           <h1 className="text-3xl font-semibold text-black mb-2">PEIDIR Research Model</h1>
           <p className="text-gray-600 text-lg">
@@ -911,7 +997,6 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Database and Drive Toggle Buttons */}
         <div className="mb-6 flex gap-3">
           <Button
             type="button"
@@ -937,7 +1022,6 @@ export default function Home() {
           </Button>
         </div>
 
-        {/* Database Results Section */}
         <div
           className={`overflow-hidden transition-all duration-300 ease-in-out mb-8 ${
             isDatabaseOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
@@ -1060,13 +1144,10 @@ export default function Home() {
                               <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
                                 {(() => {
                                   try {
-                                    // Check if it's a PDF file path
                                     if (result.link && result.link.includes(".pdf")) {
-                                      // Extract meaningful info from PDF path
                                       const fileName = result.link.split("/").pop() || result.link
                                       const cleanName = fileName.replace(".pdf", "")
 
-                                      // Try to extract domain from filename
                                       const parts = cleanName.split("_")
                                       if (parts.length > 0 && parts[0].includes(".")) {
                                         return `PDF: ${parts[0]}`
@@ -1074,7 +1155,6 @@ export default function Home() {
                                       return "PDF File"
                                     }
 
-                                    // Regular URL handling
                                     return new URL(result.link).hostname
                                   } catch {
                                     return result.link && result.link.includes(".pdf") ? "PDF File" : "Unknown"
@@ -1095,13 +1175,11 @@ export default function Home() {
                               size="sm"
                               onClick={() => {
                                 if (result.link && result.link.includes(".pdf")) {
-                                  // Open PDF viewer for PDF files
                                   const pdfUrl = `${BASE_URL}/pdf?name=${encodeURIComponent(result.link.replace("cache_pdfs/", ""))}`
                                   setCurrentPdfUrl(pdfUrl)
                                   setCurrentPdfName(result.link)
                                   setIsPdfDialogOpen(true)
                                 } else {
-                                  // Open external link for regular URLs
                                   window.open(result.link, "_blank", "noopener,noreferrer")
                                 }
                               }}
@@ -1128,7 +1206,6 @@ export default function Home() {
           </Card>
         </div>
 
-        {/* Drive Files Section */}
         <div
           className={`overflow-hidden transition-all duration-300 ease-in-out mb-8 ${
             isDriveOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
@@ -1169,7 +1246,6 @@ export default function Home() {
                 ) : (
                   <div>
                     {(() => {
-                      // Group files by folder
                       const groupedFiles = driveFiles.reduce(
                         (groups, fileName) => {
                           const parts = fileName.split("/")
@@ -1188,16 +1264,14 @@ export default function Home() {
                         {} as Record<string, string[]>,
                       )
 
-                      // Sort folders, with "Root" last
                       const sortedFolders = Object.keys(groupedFiles).sort((a, b) => {
                         if (a === "Root") return 1
                         if (b === "Root") return -1
                         return a.localeCompare(b)
                       })
 
-                      return sortedFolders.map((folderName, folderIndex) => (
+                      return sortedFolders.map((folderName) => (
                         <div key={folderName}>
-                          {/* Folder Header */}
                           {folderName !== "Root" && (
                             <div className="bg-gray-100 px-4 py-2 border-b border-gray-200 sticky top-0 z-10">
                               <div className="flex items-center gap-2">
@@ -1210,9 +1284,8 @@ export default function Home() {
                             </div>
                           )}
 
-                          {/* Files in folder */}
                           <div className={folderName !== "Root" ? "bg-gray-50/50" : ""}>
-                            {groupedFiles[folderName].map((fileName, fileIndex) => (
+                            {groupedFiles[folderName].map((fileName) => (
                               <div
                                 key={fileName}
                                 className={`p-4 hover:bg-gray-100 transition-colors border-b border-gray-100 last:border-b-0 ${
@@ -1256,7 +1329,6 @@ export default function Home() {
           </Card>
         </div>
 
-        {/* PDF Viewer Dialog */}
         <Dialog open={isPdfDialogOpen} onOpenChange={setIsPdfDialogOpen}>
           <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
             <DialogHeader>
@@ -1296,7 +1368,6 @@ export default function Home() {
           </DialogContent>
         </Dialog>
 
-        {/* CSV Data Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="max-w-6xl max-h-[80vh] overflow-hidden">
             <DialogHeader>
@@ -1351,7 +1422,6 @@ export default function Home() {
           </DialogContent>
         </Dialog>
 
-        {/* Manual URL Addition Dialog */}
         <Dialog open={isManualAddDialogOpen} onOpenChange={setIsManualAddDialogOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
@@ -1424,7 +1494,6 @@ export default function Home() {
           </DialogContent>
         </Dialog>
 
-        {/* Manual PDF Upload Dialog */}
         <Dialog open={isManualAddPdfDialogOpen} onOpenChange={setIsManualAddPdfDialogOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
@@ -1506,7 +1575,6 @@ export default function Home() {
           </DialogContent>
         </Dialog>
 
-        {/* Batch Search Dialog */}
         <Dialog open={isBatchDialogOpen} onOpenChange={setIsBatchDialogOpen}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
@@ -1559,7 +1627,131 @@ antamina community opposition`}
           </DialogContent>
         </Dialog>
 
-        {/* Search Form */}
+        <Dialog open={isDataParamsDialogOpen} onOpenChange={setIsDataParamsDialogOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-semibold text-black">Configure Data Parameters</DialogTitle>
+              <DialogDescription className="text-gray-600">
+                Customize the CSV output columns and their descriptions. Drag to reorder, or use arrow buttons.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Badge variant="secondary" className="bg-gray-100 text-gray-700">
+                  {dataParams.length} parameters
+                </Badge>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={resetDataParams}
+                    className="text-xs text-gray-500 hover:text-gray-700"
+                  >
+                    Reset to default
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addParam}
+                    className="text-xs border-gray-300 hover:bg-gray-50 text-gray-700 bg-transparent"
+                  >
+                    <Plus className="w-3 h-3 mr-1" />
+                    Add Parameter
+                  </Button>
+                </div>
+              </div>
+
+              <div className="max-h-[50vh] overflow-y-auto space-y-2 pr-2">
+                {dataParams.map((param, index) => (
+                  <div
+                    key={param.id}
+                    className="border border-gray-200 rounded-md p-3 bg-white hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-start gap-2">
+                      <div className="flex flex-col gap-1 pt-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => moveParamUp(index)}
+                          disabled={index === 0}
+                          className="h-6 w-6 p-0 text-gray-400 hover:text-gray-700 disabled:opacity-30"
+                        >
+                          <ArrowUp className="w-3 h-3" />
+                        </Button>
+                        <GripVertical className="w-4 h-4 text-gray-300" />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => moveParamDown(index)}
+                          disabled={index === dataParams.length - 1}
+                          className="h-6 w-6 p-0 text-gray-400 hover:text-gray-700 disabled:opacity-30"
+                        >
+                          <ArrowDown className="w-3 h-3" />
+                        </Button>
+                      </div>
+
+                      <div className="flex-1 space-y-2">
+                        <Input
+                          placeholder="Parameter name (e.g., company, date, country)"
+                          value={param.name}
+                          onChange={(e) => updateParam(param.id, "name", e.target.value)}
+                          className="text-sm border-gray-300 focus:border-gray-400 focus:ring-0 rounded-md font-medium"
+                        />
+                        <Textarea
+                          placeholder="Parameter description..."
+                          value={param.description}
+                          onChange={(e) => updateParam(param.id, "description", e.target.value)}
+                          className="min-h-[60px] text-sm border-gray-300 focus:border-gray-400 focus:ring-0 rounded-md resize-none"
+                        />
+                      </div>
+
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => deleteParam(param.id)}
+                        className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 mt-1"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4 border-t border-gray-200">
+                <Button
+                  onClick={() => setIsDataParamsDialogOpen(false)}
+                  variant="outline"
+                  className="border-gray-300 hover:bg-gray-50 text-gray-700"
+                  disabled={isProcessing}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={processWithDataParams}
+                  disabled={isProcessing}
+                  className="bg-gray-600 hover:bg-gray-700 text-white"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      Processing...
+                    </>
+                  ) : (
+                    "Process Database"
+                  )}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         <div className="mb-8 space-y-4">
           <div className="flex items-center gap-2 mb-4">
             <Globe className="w-5 h-5 text-gray-600" />
@@ -1607,7 +1799,6 @@ antamina community opposition`}
             </Button>
           </form>
 
-          {/* Methodology Editor - Rule-based XML system */}
           <div
             className={`overflow-hidden transition-all duration-300 ease-in-out ${
               isMethodologyOpen ? "max-h-[800px] opacity-100" : "max-h-0 opacity-0"
@@ -1641,7 +1832,6 @@ antamina community opposition`}
                     </div>
                   </div>
 
-                  {/* Preset Buttons */}
                   <div className="flex gap-2 flex-wrap">
                     <div className="flex items-center gap-2 mr-4">
                       <BookOpen className="w-4 h-4 text-gray-500" />
@@ -1664,7 +1854,6 @@ antamina community opposition`}
                     ))}
                   </div>
 
-                  {/* Rules Editor */}
                   <div className="space-y-3 max-h-96 overflow-y-auto">
                     {methodologyRules.map((rule) => (
                       <div key={rule.id} className="border border-gray-200 rounded-md p-3 space-y-2">
@@ -1702,7 +1891,6 @@ antamina community opposition`}
                     ))}
                   </div>
 
-                  {/* Time Period Rule - Global and Non-editable */}
                   <div className="border-2 border-blue-200 bg-blue-50/30 rounded-md p-4 space-y-3">
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-blue-600" />
@@ -1726,9 +1914,7 @@ antamina community opposition`}
                         minStepsBetweenThumbs={1}
                         className="w-full"
                         disabled={isSearching}
-                      >
-                      </Slider>
-
+                      />
                       <div className="flex justify-between text-xs text-gray-500">
                         <span>2002</span>
                         <span>2025</span>
@@ -1757,7 +1943,6 @@ antamina community opposition`}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Live Logs */}
           <div>
             <div className="flex items-center gap-2 mb-4">
               <Circle
@@ -1787,7 +1972,6 @@ antamina community opposition`}
             </Card>
           </div>
 
-          {/* Search Results */}
           <div>
             <div className="flex items-center gap-2 mb-4">
               <h2 className="text-lg font-medium text-black">Search Results</h2>
