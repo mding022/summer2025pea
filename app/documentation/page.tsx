@@ -56,7 +56,7 @@ The AI is provided with an interface for a SERP client written in Python. This c
 Additionally, the AI is also provided with an interface to search through the GDELT 2.0 database, which uses the API \`https://api.gdeltproject.org/api/v2/\` which contains data for the past 8 years of GDELT data. 
 
 To perform research, the AI model is trained to create requests based on a custom search methodology, and to align its tool calls to both the Google web search and GDELT client to as close to the methodology as possible. The AI model is also provided with a sample snippet of a successful response for consistency and to reduce the chance of hallucination. 
-### New Addition: Relevance Saturation
+### Relevance Saturation
 To replace the hard limit of results that are fetched by the model, the AI also must now reach a certain level of relevance saturation in order to be satisfied with a search. 
 > Relevance saturation criteria provided (Exact string code):
 \\- The AI adds any article that closely matches the methodology—mentions the mine, protests, conflicts, or related events—to the collection.
