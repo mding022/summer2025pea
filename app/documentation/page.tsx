@@ -83,7 +83,7 @@ The search model is using the most recent Gemini model \`gemini-2.5-flash\` , si
 
 ## Analyzing GDELT time series data to detect anomalies
 
-The event detection algorithm operates on time-series data from GDELT 2.0's Doc API representing daily media coverage volumes for a given query. The underlying mathematical approach combines time-series decomposition and statistical anomaly detection to isolate significant surges in attention from normal background fluctuations (for example, quarterly earnings filings from companies).
+The event detection algorithm operates on time-series data from GDELT 2.0's Doc API representing daily media coverage volumes for a given query. The underlying mathematical approach combines time-series decomposition and statistical anomaly detection to isolate significant surges in attention from normal background fluctuations (for example, quarterly earnings filings from companies). I used a STL period (stl_period) of 90 days, for each quarter (Q1,2,3,4).
 
 ### 1. Decomposition
 
