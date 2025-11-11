@@ -79,7 +79,65 @@ This will force the AI model to add \`site:olca.cl\` for all search requests.
 
 Since the AI model is based on a feedback loop that iteratively performs searches, it will always use previous website result data (title, snippet, date), in order to create better search operations and be as efficient as possible. An example was, if it searches for \`mine name\`, but there are many identical web pages titled with \`community name\`, it may look for protests in the community instead, even if the titles are different. 
 
-The search model is using the most recent Gemini model \`gemini-2.5-flash\` , since it has more capable reasoning and logic capabilities. Note that data extraction and compilation does not require these capabilities.`
+The search model is using the most recent Gemini model \`gemini-2.5-flash\` , since it has more capable reasoning and logic capabilities. Note that data extraction and compilation does not require these capabilities.
+
+## Analyzing time series data to detect anomalies
+
+The event detection algorithm operates on time-series data representing daily media coverage volumes for a given query. The underlying mathematical approach combines time-series decomposition and statistical anomaly detection to isolate significant surges in attention from normal background fluctuations.
+
+### 1. Decomposition
+
+The process begins by applying **STL (Seasonal-Trend decomposition using Loess)** to separate the observed series \( x_t \) into three additive components:
+
+\[
+x_t = T_t + S_t + R_t
+\]
+
+where:
+- \( T_t \) represents the **trend** component, capturing long-term changes in media attention,
+- \( S_t \) represents the **seasonal** component, capturing periodic cycles such as weekly or monthly variations,
+- \( R_t \) represents the **residual** component, containing irregular fluctuations that may correspond to specific events.
+
+The residual component \( R_t \) is the focus of anomaly detection since it represents deviations unexplained by regular trend or seasonal behavior.
+
+### 2. Standardization and Z-Score
+
+To quantify how unusual each residual is, the algorithm standardizes \( R_t \) using a **z-score**, defined as:
+
+\[
+z_t = \frac{R_t - \mu_R}{\sigma_R}
+\]
+
+where:
+- \( \mu_R \) is the mean of all residuals,
+- \( \sigma_R \) is the standard deviation of the residuals.
+
+The z-score measures how many standard deviations each day’s residual deviates from the mean. A z-score close to 0 indicates typical variation, while large positive z-scores indicate statistically significant spikes in coverage. In this implementation, days where \( z_t > 3 \) are treated as **spike days**, signaling potential real-world events.
+
+### 3. Event Clustering
+
+Since major events often span multiple consecutive days, spike days are grouped into **event windows**. If two spike days occur within a specified temporal gap (e.g., fewer than five days apart), they are merged into a single event cluster. For each cluster, the algorithm calculates:
+
+- **Start and end date**
+- **Peak z-score**
+- **Peak intensity (raw coverage volume)**
+- **Total event volume**
+- **Duration (in days)**
+
+An event’s **strength** metric is computed as a function of both its peak z-score and total volume, balancing the magnitude and persistence of the spike.
+
+### 4. Filtering and Classification
+
+Weak or noisy clusters—those with low peak z-scores or minimal total volume relative to the overall series—are filtered out. If too many weak clusters are found, the dataset is treated as noise and no major events are reported. The remaining clusters represent statistically significant deviations in media attention and are labeled as **major events**.
+
+### 5. Interpretation
+
+This method identifies time periods where observed media coverage sharply exceeds what would be expected based on historical trends and seasonal cycles. By adjusting parameters such as the STL period, z-score threshold, and clustering gap, the model can be tuned to different types of topics and noise levels. The result is a mathematically grounded and interpretable way to detect meaningful spikes in global attention.
+
+
+`
+
+
 
 export default function MarkdownViewer() {
   return (

@@ -1062,79 +1062,122 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-7xl mx-auto px-6 py-12">
-        {/* Header */}
-        <div className="mb-12">
-          <h1 className="text-3xl font-semibold text-black mb-2">PEIDIR Research Model</h1>
-          <p className="text-gray-600 text-lg">
-            Protest Events, Institutional Demands, Institutional Responses (PEIDIR) Agential Research Model
-          </p>
+    <div className="min-h-screen bg-background">
+      <div className="border-b border-border bg-card">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center">
+                <Database className="w-5 h-5 text-primary-foreground" />
+              </div>
+              <div>
+                <h1 className="text-lg font-semibold text-foreground">PEIDIR Research Model</h1>
+                <p className="text-xs text-muted-foreground">Agential Research & Data Analysis Platform</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs border-border text-muted-foreground">
+                Production
+              </Badge>
+            </div>
+          </div>
         </div>
+      </div>
 
-        {/* Database and Drive Toggle Buttons */}
-        <div className="mb-6 flex gap-3">
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-3">
           <Button
             type="button"
             onClick={handleDatabaseToggle}
             variant="outline"
-            className="border-gray-300 hover:bg-gray-50 text-gray-700 bg-transparent"
+            className={`h-auto py-3 px-4 flex items-center justify-between border-border hover:bg-secondary text-foreground transition-all ${
+              isDatabaseOpen ? "bg-secondary border-primary" : "bg-card"
+            }`}
             disabled={isSearching}
           >
-            <Database className="w-4 h-4 mr-2" />
-            View Database
-            {isDatabaseOpen ? <ChevronUp className="w-4 h-4 ml-2" /> : <ChevronDown className="w-4 h-4 ml-2" />}
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center">
+                <Database className="w-4 h-4 text-muted-foreground" />
+              </div>
+              <div className="text-left">
+                <div className="text-sm font-medium">Database</div>
+                <div className="text-xs text-muted-foreground">{databaseResults.length} results</div>
+              </div>
+            </div>
+            {isDatabaseOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </Button>
+
           <Button
             type="button"
             onClick={handleDriveToggle}
             variant="outline"
-            className="border-gray-300 hover:bg-gray-50 text-gray-700 bg-transparent"
+            className={`h-auto py-3 px-4 flex items-center justify-between border-border hover:bg-secondary text-foreground transition-all ${
+              isDriveOpen ? "bg-secondary border-primary" : "bg-card"
+            }`}
             disabled={isSearching}
           >
-            <FolderOpen className="w-4 h-4 mr-2" />
-            View Drive
-            {isDriveOpen ? <ChevronUp className="w-4 h-4 ml-2" /> : <ChevronDown className="w-4 h-4 ml-2" />}
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center">
+                <FolderOpen className="w-4 h-4 text-muted-foreground" />
+              </div>
+              <div className="text-left">
+                <div className="text-sm font-medium">Drive Files</div>
+                <div className="text-xs text-muted-foreground">{driveFiles.length} files</div>
+              </div>
+            </div>
+            {isDriveOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </Button>
+
           <Button
             type="button"
             onClick={handleVolumeToggle}
             variant="outline"
-            className="border-gray-300 hover:bg-gray-50 text-gray-700 bg-transparent"
+            className={`h-auto py-3 px-4 flex items-center justify-between border-border hover:bg-secondary text-foreground transition-all ${
+              isVolumeOpen ? "bg-secondary border-primary" : "bg-card"
+            }`}
             disabled={isSearching}
           >
-            <BarChart3 className="w-4 h-4 mr-2" />
-            Volume Analysis
-            {isVolumeOpen ? <ChevronUp className="w-4 h-4 ml-2" /> : <ChevronDown className="w-4 h-4 ml-2" />}
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center">
+                <BarChart3 className="w-4 h-4 text-muted-foreground" />
+              </div>
+              <div className="text-left">
+                <div className="text-sm font-medium">Volume Analysis</div>
+                <div className="text-xs text-muted-foreground">GDELT insights</div>
+              </div>
+            </div>
+            {isVolumeOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </Button>
         </div>
 
-        {/* Database Results Section */}
         <div
-          className={`overflow-hidden transition-all duration-300 ease-in-out mb-8 ${
+          className={`overflow-hidden transition-all duration-300 ease-in-out mb-6 ${
             isDatabaseOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
           }`}
         >
-          <Card className="border border-gray-200 shadow-none">
-            <CardHeader className="pb-3">
+          <Card className="border-border bg-card shadow-lg">
+            <CardHeader className="pb-3 border-b border-border">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-medium text-black">Database Results</CardTitle>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
+                  <CardTitle className="text-base font-semibold text-foreground">Database Results</CardTitle>
                   {databaseResults.length > 0 && (
-                    <Badge variant="secondary" className="bg-gray-100 text-gray-700">
+                    <Badge variant="secondary" className="bg-secondary text-muted-foreground border-0">
                       {databaseResults.length} results
                     </Badge>
                   )}
+                </div>
+                <div className="flex items-center gap-2">
                   <Button
                     type="button"
                     onClick={processDatabase}
                     disabled={isProcessing || isLoadingDatabase}
-                    className="bg-gray-600 hover:bg-gray-700 text-white text-sm px-3 py-1 h-8"
+                    size="sm"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
                   >
                     {isProcessing ? (
                       <>
-                        <Loader2 className="w-4 h-4 animate-spin mr-1" />
-                        Processing...
+                        <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                        Processing
                       </>
                     ) : (
                       "Process"
@@ -1145,16 +1188,17 @@ export default function Home() {
                       type="button"
                       onClick={fetchCSVData}
                       disabled={isLoadingCSV}
-                      className="bg-gray-600 hover:bg-gray-700 text-white text-sm px-3 py-1 h-8"
+                      size="sm"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       {isLoadingCSV ? (
                         <>
-                          <Loader2 className="w-4 h-4 animate-spin mr-1" />
-                          Loading...
+                          <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                          Loading
                         </>
                       ) : (
                         <>
-                          <FileText className="w-4 h-4 mr-1" />
+                          <FileText className="w-3 h-3 mr-1" />
                           View Data
                         </>
                       )}
@@ -1163,30 +1207,41 @@ export default function Home() {
                   <Button
                     type="button"
                     onClick={() => setIsManualAddDialogOpen(true)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1 h-8"
+                    size="sm"
+                    variant="outline"
+                    className="border-border hover:bg-secondary text-foreground"
                   >
+                    <Plus className="w-3 h-3 mr-1" />
                     Add URL
                   </Button>
                   <Button
                     type="button"
                     onClick={() => setIsManualAddPdfDialogOpen(true)}
-                    className="bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1 h-8"
+                    size="sm"
+                    variant="outline"
+                    className="border-border hover:bg-secondary text-foreground"
                   >
+                    <Plus className="w-3 h-3 mr-1" />
                     Add PDF
                   </Button>
                   <Button
                     type="button"
                     onClick={handleClearSession}
                     disabled={isClearingSession || isLoadingDatabase}
-                    className="bg-red-600 hover:bg-red-700 text-white text-sm px-3 py-1 h-8"
+                    size="sm"
+                    variant="outline"
+                    className="border-destructive/50 hover:bg-destructive/10 text-destructive bg-transparent"
                   >
                     {isClearingSession ? (
                       <>
-                        <Loader2 className="w-4 h-4 animate-spin mr-1" />
-                        Clearing...
+                        <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                        Clearing
                       </>
                     ) : (
-                      "Clear All"
+                      <>
+                        <Trash2 className="w-3 h-3 mr-1" />
+                        Clear All
+                      </>
                     )}
                   </Button>
                   <Button
@@ -1195,7 +1250,7 @@ export default function Home() {
                     size="sm"
                     onClick={fetchAllResults}
                     disabled={isLoadingDatabase}
-                    className="text-gray-500 hover:text-gray-700"
+                    className="text-muted-foreground hover:text-foreground hover:bg-secondary"
                   >
                     {isLoadingDatabase ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -1207,50 +1262,53 @@ export default function Home() {
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="max-h-80 overflow-y-auto">
+              <div className="max-h-80 overflow-y-auto custom-scrollbar">
                 {isLoadingDatabase ? (
-                  <div className="text-gray-500 text-center py-8">
+                  <div className="text-muted-foreground text-center py-12">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
-                    Loading database results...
+                    <p className="text-sm">Loading database results...</p>
                   </div>
                 ) : databaseResults.length === 0 ? (
-                  <div className="text-gray-500 text-center py-8">No results found in database</div>
+                  <div className="text-muted-foreground text-center py-12">
+                    <Database className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No results found in database</p>
+                  </div>
                 ) : (
-                  <div className="divide-y divide-gray-200">
+                  <div className="divide-y divide-border">
                     {databaseResults.map((result) => (
-                      <div key={result.id} className="p-4 hover:bg-gray-50 transition-colors">
+                      <div key={result.id} className="p-4 hover:bg-secondary/50 transition-colors">
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1 space-y-2">
                             <div className="flex items-center gap-2">
-                              <h3 className="font-medium text-black leading-tight">{result.title}</h3>
-                              <Badge variant="outline" className="text-xs text-gray-500 border-gray-300">
-                                ID: {result.id}
+                              <h3 className="font-medium text-foreground leading-tight">{result.title}</h3>
+                              <Badge variant="outline" className="text-xs text-muted-foreground border-border">
+                                #{result.id}
                               </Badge>
                             </div>
-                            <p className="text-sm text-gray-600 leading-relaxed">{result.snippet}</p>
+                            <p className="text-sm text-muted-foreground leading-relaxed">{result.snippet}</p>
                             <div className="flex items-center gap-2">
-                              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                              <Badge
+                                variant="secondary"
+                                className="text-xs bg-secondary text-muted-foreground border-0"
+                              >
                                 {(() => {
                                   try {
                                     if (result.link && result.link.includes(".pdf")) {
                                       const fileName = result.link.split("/").pop() || result.link
                                       const cleanName = fileName.replace(".pdf", "")
-
                                       const parts = cleanName.split("_")
                                       if (parts.length > 0 && parts[0].includes(".")) {
                                         return `PDF: ${parts[0]}`
                                       }
                                       return "PDF File"
                                     }
-
                                     return new URL(result.link).hostname
                                   } catch {
                                     return result.link && result.link.includes(".pdf") ? "PDF File" : "Unknown"
                                   }
                                 })()}
-                              </span>
-                              <span className="text-xs text-gray-400">
-                                Query:{" "}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground">
                                 {result.search_query.length > 50
                                   ? `${result.search_query.substring(0, 50)}...`
                                   : result.search_query}
@@ -1271,7 +1329,7 @@ export default function Home() {
                                   window.open(result.link, "_blank", "noopener,noreferrer")
                                 }
                               }}
-                              className="flex-shrink-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                              className="text-muted-foreground hover:text-foreground hover:bg-secondary"
                             >
                               <ExternalLink className="w-4 h-4" />
                             </Button>
@@ -1279,7 +1337,7 @@ export default function Home() {
                               variant="ghost"
                               size="sm"
                               onClick={() => removeResult(result.id)}
-                              className="flex-shrink-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -1294,44 +1352,46 @@ export default function Home() {
           </Card>
         </div>
 
-        {/* Drive Files Section */}
         <div
-          className={`overflow-hidden transition-all duration-300 ease-in-out mb-8 ${
+          className={`overflow-hidden transition-all duration-300 ease-in-out mb-6 ${
             isDriveOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
           }`}
         >
-          <Card className="border border-gray-200 shadow-none">
-            <CardHeader className="pb-3">
+          <Card className="border-border bg-card shadow-lg">
+            <CardHeader className="pb-3 border-b border-border">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-medium text-black">Drive Files</CardTitle>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
+                  <CardTitle className="text-base font-semibold text-foreground">Drive Files</CardTitle>
                   {driveFiles.length > 0 && (
-                    <Badge variant="secondary" className="bg-gray-100 text-gray-700">
+                    <Badge variant="secondary" className="bg-secondary text-muted-foreground border-0">
                       {driveFiles.length} files
                     </Badge>
                   )}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={fetchDriveFiles}
-                    disabled={isLoadingDrive}
-                    className="text-gray-500 hover:text-gray-700"
-                  >
-                    {isLoadingDrive ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                  </Button>
                 </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={fetchDriveFiles}
+                  disabled={isLoadingDrive}
+                  className="text-muted-foreground hover:text-foreground hover:bg-secondary"
+                >
+                  {isLoadingDrive ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                </Button>
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="max-h-80 overflow-y-auto">
+              <div className="max-h-80 overflow-y-auto custom-scrollbar">
                 {isLoadingDrive ? (
-                  <div className="text-gray-500 text-center py-8">
+                  <div className="text-muted-foreground text-center py-12">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
-                    Loading drive files...
+                    <p className="text-sm">Loading drive files...</p>
                   </div>
                 ) : driveFiles.length === 0 ? (
-                  <div className="text-gray-500 text-center py-8">No files found in drive</div>
+                  <div className="text-muted-foreground text-center py-12">
+                    <FolderOpen className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No files found in drive</p>
+                  </div>
                 ) : (
                   <div>
                     {(() => {
@@ -1339,11 +1399,9 @@ export default function Home() {
                         (groups, fileName) => {
                           const parts = fileName.split("/")
                           let folderName = "Root"
-
                           if (parts.length > 1 && parts[0] !== "Unknown" && parts[0] !== "not_specified") {
                             folderName = parts[0]
                           }
-
                           if (!groups[folderName]) {
                             groups[folderName] = []
                           }
@@ -1362,30 +1420,29 @@ export default function Home() {
                       return sortedFolders.map((folderName) => (
                         <div key={folderName}>
                           {folderName !== "Root" && (
-                            <div className="bg-gray-100 px-4 py-2 border-b border-gray-200 sticky top-0 z-10">
+                            <div className="bg-secondary/50 px-4 py-2 border-b border-border sticky top-0 z-10">
                               <div className="flex items-center gap-2">
-                                <FolderOpen className="w-4 h-4 text-gray-600" />
-                                <span className="font-medium text-gray-800">{folderName}</span>
-                                <Badge variant="outline" className="text-xs text-gray-500 border-gray-300">
+                                <FolderOpen className="w-4 h-4 text-primary" />
+                                <span className="font-medium text-foreground">{folderName}</span>
+                                <Badge variant="outline" className="text-xs text-muted-foreground border-border">
                                   {groupedFiles[folderName].length} files
                                 </Badge>
                               </div>
                             </div>
                           )}
-
-                          <div className={folderName !== "Root" ? "bg-gray-50/50" : ""}>
+                          <div className={folderName !== "Root" ? "bg-secondary/20" : ""}>
                             {groupedFiles[folderName].map((fileName) => (
                               <div
                                 key={fileName}
-                                className={`p-4 hover:bg-gray-100 transition-colors border-b border-gray-100 last:border-b-0 ${
+                                className={`p-4 hover:bg-secondary/50 transition-colors border-b border-border/50 last:border-b-0 ${
                                   folderName !== "Root" ? "pl-8" : ""
                                 }`}
                               >
                                 <div className="flex items-center justify-between gap-4">
                                   <div className="flex-1">
                                     <div className="flex items-center gap-2">
-                                      <FileText className="w-4 h-4 text-red-500" />
-                                      <h3 className="font-medium text-black leading-tight">
+                                      <FileText className="w-4 h-4 text-destructive" />
+                                      <h3 className="font-medium text-foreground leading-tight text-sm">
                                         {(() => {
                                           const nameWithoutExt = fileName.replace(".pdf", "")
                                           const decoded = decodeURIComponent(nameWithoutExt)
@@ -1394,13 +1451,13 @@ export default function Home() {
                                         })()}
                                       </h3>
                                     </div>
-                                    <div className="text-xs text-gray-400 mt-1 ml-6">{fileName}</div>
+                                    <div className="text-xs text-muted-foreground mt-1 ml-6">{fileName}</div>
                                   </div>
                                   <Button
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => openPdf(fileName)}
-                                    className="flex-shrink-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                                    className="text-muted-foreground hover:text-foreground hover:bg-secondary"
                                   >
                                     <ExternalLink className="w-4 h-4" />
                                   </Button>
@@ -1419,33 +1476,34 @@ export default function Home() {
         </div>
 
         <div
-          className={`overflow-hidden transition-all duration-300 ease-in-out mb-8 ${
+          className={`overflow-hidden transition-all duration-300 ease-in-out mb-6 ${
             isVolumeOpen ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
           }`}
         >
-          <Card className="border border-gray-200 shadow-none">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-medium text-black">Volume Analysis</CardTitle>
+          <Card className="border-border bg-card shadow-lg">
+            <CardHeader className="pb-3 border-b border-border">
+              <CardTitle className="text-base font-semibold text-foreground">Volume Analysis</CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">Analyze search volume trends using GDELT data</p>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-4">
               <form onSubmit={handleVolumeSubmit} className="flex gap-3">
                 <Input
                   type="text"
-                  placeholder="query for volume analysis"
+                  placeholder="Enter query for volume analysis..."
                   value={volumeQuery}
                   onChange={(e) => setVolumeQuery(e.target.value)}
-                  className="flex-1 text-sm border-gray-300 focus:border-gray-400 focus:ring-0 rounded-md"
+                  className="flex-1 text-sm border-border bg-secondary focus:border-primary focus:ring-1 focus:ring-primary rounded-md text-foreground"
                   disabled={isLoadingVolume}
                 />
                 <Button
                   type="submit"
                   disabled={!volumeQuery.trim() || isLoadingVolume}
-                  className="bg-gray-600 hover:bg-gray-700 text-white"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   {isLoadingVolume ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      Loading...
+                      Loading
                     </>
                   ) : (
                     <>
@@ -1459,44 +1517,45 @@ export default function Home() {
               {volumeData.length > 0 && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-medium text-gray-700">Timeline for: {volumeQueryTitle}</h3>
-                    <Badge variant="secondary" className="bg-gray-100 text-gray-700">
+                    <h3 className="text-sm font-medium text-foreground">Timeline: {volumeQueryTitle}</h3>
+                    <Badge variant="secondary" className="bg-secondary text-muted-foreground border-0">
                       {volumeData.length} data points
                     </Badge>
                   </div>
 
-                  <div className="h-80 w-full">
+                  <div className="h-80 w-full bg-secondary/30 rounded-lg p-4">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 60 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                         <XAxis
                           dataKey="date"
                           angle={-45}
                           textAnchor="end"
                           height={80}
-                          tick={{ fontSize: 10, fill: "#6b7280" }}
-                          stroke="#9ca3af"
+                          tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                          stroke="hsl(var(--border))"
                         />
                         <YAxis
-                          tick={{ fontSize: 12, fill: "#6b7280" }}
-                          stroke="#9ca3af"
+                          tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                          stroke="hsl(var(--border))"
                           label={{
                             value: "Volume Intensity",
                             angle: -90,
                             position: "insideLeft",
-                            style: { fill: "#6b7280" },
+                            style: { fill: "hsl(var(--muted-foreground))" },
                           }}
                         />
                         <Tooltip
                           contentStyle={{
-                            backgroundColor: "white",
-                            border: "1px solid #e5e7eb",
+                            backgroundColor: "hsl(var(--card))",
+                            border: "1px solid hsl(var(--border))",
                             borderRadius: "6px",
                             fontSize: "12px",
+                            color: "hsl(var(--foreground))",
                           }}
-                          labelStyle={{ color: "#374151", fontWeight: 500 }}
+                          labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 500 }}
                         />
-                        <Bar dataKey="value" fill="#4b5563" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="value" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -1504,12 +1563,16 @@ export default function Home() {
               )}
 
               {!isLoadingVolume && volumeData.length === 0 && volumeQuery && (
-                <div className="text-center py-8 text-gray-500">No volume data found for this query</div>
+                <div className="text-center py-12 text-muted-foreground">
+                  <BarChart3 className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No volume data found for this query</p>
+                </div>
               )}
 
               {!volumeQuery && (
-                <div className="text-center py-8 text-gray-500">
-                  Enter a search query to analyze volume trends over time
+                <div className="text-center py-12 text-muted-foreground">
+                  <BarChart3 className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">Enter a search query to analyze volume trends over time</p>
                 </div>
               )}
             </CardContent>
@@ -1521,13 +1584,15 @@ export default function Home() {
             <DialogHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <DialogTitle className="text-xl font-semibold text-black">PDF Viewer</DialogTitle>
-                  <DialogDescription className="text-gray-600">{formatFileName(currentPdfName)}</DialogDescription>
+                  <DialogTitle className="text-xl font-semibold text-foreground">PDF Viewer</DialogTitle>
+                  <DialogDescription className="text-muted-foreground">
+                    {formatFileName(currentPdfName)}
+                  </DialogDescription>
                 </div>
                 <Button
                   onClick={downloadPdf}
                   variant="outline"
-                  className="border-gray-300 hover:bg-gray-50 text-gray-700 bg-transparent"
+                  className="border-border hover:bg-secondary text-foreground bg-transparent"
                 >
                   <Download className="w-4 h-4 mr-2" />
                   Download
@@ -1538,16 +1603,16 @@ export default function Home() {
               {currentPdfUrl && (
                 <iframe
                   src={currentPdfUrl}
-                  className="w-full h-[70vh] border border-gray-200 rounded-md"
+                  className="w-full h-[70vh] border border-border rounded-md"
                   title="PDF Viewer"
                 />
               )}
             </div>
-            <div className="flex justify-end pt-4">
+            <div className="flex justify-end pt-4 border-t border-border">
               <Button
                 onClick={() => setIsPdfDialogOpen(false)}
                 variant="outline"
-                className="border-gray-300 hover:bg-gray-50 text-gray-700"
+                className="border-border hover:bg-secondary text-foreground"
               >
                 Close
               </Button>
@@ -1558,36 +1623,36 @@ export default function Home() {
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="max-w-6xl max-h-[80vh] overflow-hidden">
             <DialogHeader>
-              <DialogTitle className="text-xl font-semibold text-black">Processed Data Results</DialogTitle>
-              <DialogDescription className="text-gray-600">
+              <DialogTitle className="text-xl font-semibold text-foreground">Processed Data Results</DialogTitle>
+              <DialogDescription className="text-muted-foreground">
                 CSV data from the processed database results
               </DialogDescription>
             </DialogHeader>
-            <div className="overflow-auto max-h-[60vh]">
+            <div className="overflow-auto max-h-[60vh] custom-scrollbar">
               {csvData && (
-                <div className="border border-gray-200 rounded-md">
+                <div className="border border-border rounded-md">
                   <table className="w-full text-sm">
-                    <thead className="bg-gray-50 border-b border-gray-200">
+                    <thead className="bg-secondary border-b border-border">
                       <tr>
                         {csvData.headers.map((header, index) => (
                           <th
                             key={index}
-                            className="px-3 py-2 text-left font-medium text-gray-700 border-r border-gray-200 last:border-r-0"
+                            className="px-3 py-2 text-left font-medium text-foreground border-r border-border last:border-r-0"
                           >
                             {header}
                           </th>
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200">
+                    <tbody className="divide-y divide-border">
                       {csvData.rows.map((row, rowIndex) => (
-                        <tr key={rowIndex} className="hover:bg-gray-50">
+                        <tr key={rowIndex} className="hover:bg-secondary/50">
                           {row.map((cell, cellIndex) => (
                             <td
                               key={cellIndex}
-                              className="px-3 py-2 text-gray-700 border-r border-gray-200 last:border-r-0"
+                              className="px-3 py-2 text-foreground border-r border-border last:border-r-0"
                             >
-                              {cell === "-999" ? <span className="text-gray-400 italic">N/A</span> : cell}
+                              {cell === "-999" ? <span className="text-muted-foreground italic">N/A</span> : cell}
                             </td>
                           ))}
                         </tr>
@@ -1597,11 +1662,11 @@ export default function Home() {
                 </div>
               )}
             </div>
-            <div className="flex justify-end pt-4">
+            <div className="flex justify-end pt-4 border-t border-border">
               <Button
                 onClick={() => setIsDialogOpen(false)}
                 variant="outline"
-                className="border-gray-300 hover:bg-gray-50 text-gray-700"
+                className="border-border hover:bg-secondary text-foreground"
               >
                 Close
               </Button>
@@ -1612,8 +1677,8 @@ export default function Home() {
         <Dialog open={isManualAddDialogOpen} onOpenChange={setIsManualAddDialogOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle className="text-xl font-semibold text-black">Add Manual URL</DialogTitle>
-              <DialogDescription className="text-gray-600">
+              <DialogTitle className="text-xl font-semibold text-foreground">Add Manual URL</DialogTitle>
+              <DialogDescription className="text-muted-foreground">
                 Enter a URL to manually add to the database
               </DialogDescription>
             </DialogHeader>
@@ -1623,7 +1688,7 @@ export default function Home() {
                 placeholder="https://example.com/article"
                 value={manualUrl}
                 onChange={(e) => setManualUrl(e.target.value)}
-                className="text-sm border-gray-300 focus:border-gray-400 focus:ring-0 rounded-md"
+                className="text-sm border-border bg-secondary focus:border-primary focus:ring-1 focus:ring-primary rounded-md text-foreground"
                 disabled={isAddingManualUrl}
               />
 
@@ -1631,8 +1696,8 @@ export default function Home() {
                 <div
                   className={`p-3 rounded-md text-sm ${
                     manualAddResult.message.includes("Error")
-                      ? "bg-red-50 text-red-700 border border-red-200"
-                      : "bg-green-50 text-green-700 border border-green-200"
+                      ? "bg-destructive/10 text-destructive border border-destructive/50"
+                      : "bg-green-500/10 text-green-500 border border-green-500/50"
                   }`}
                 >
                   <div className="font-medium mb-1">{manualAddResult.message}</div>
@@ -1649,7 +1714,7 @@ export default function Home() {
                 </div>
               )}
 
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-end gap-2 border-t border-border pt-4">
                 <Button
                   onClick={() => {
                     setIsManualAddDialogOpen(false)
@@ -1657,7 +1722,7 @@ export default function Home() {
                     setManualAddResult(null)
                   }}
                   variant="outline"
-                  className="border-gray-300 hover:bg-gray-50 text-gray-700"
+                  className="border-border hover:bg-secondary text-foreground"
                   disabled={isAddingManualUrl}
                 >
                   Cancel
@@ -1665,7 +1730,7 @@ export default function Home() {
                 <Button
                   onClick={addManualUrl}
                   disabled={isAddingManualUrl || !manualUrl.trim()}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   {isAddingManualUrl ? (
                     <>
@@ -1684,13 +1749,13 @@ export default function Home() {
         <Dialog open={isManualAddPdfDialogOpen} onOpenChange={setIsManualAddPdfDialogOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle className="text-xl font-semibold text-black">Upload PDF</DialogTitle>
-              <DialogDescription className="text-gray-600">
+              <DialogTitle className="text-xl font-semibold text-foreground">Upload PDF</DialogTitle>
+              <DialogDescription className="text-muted-foreground">
                 Select a PDF file to upload and add to the database
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+              <div className="border-2 border-dashed border-border rounded-lg p-6 text-center bg-secondary/30">
                 <input
                   type="file"
                   accept=".pdf"
@@ -1700,11 +1765,11 @@ export default function Home() {
                   disabled={isUploadingPdf}
                 />
                 <label htmlFor="pdf-upload" className="cursor-pointer flex flex-col items-center gap-2">
-                  <FileText className="w-8 h-8 text-gray-400" />
-                  <span className="text-sm text-gray-600">
+                  <FileText className="w-8 h-8 text-muted-foreground" />
+                  <span className="text-sm text-foreground">
                     {selectedPdfFile ? selectedPdfFile.name : "Click to select PDF file"}
                   </span>
-                  <span className="text-xs text-gray-400">PDF files only</span>
+                  <span className="text-xs text-muted-foreground">PDF files only</span>
                 </label>
               </div>
 
@@ -1712,8 +1777,8 @@ export default function Home() {
                 <div
                   className={`p-3 rounded-md text-sm ${
                     pdfUploadResult.message.includes("Error")
-                      ? "bg-red-50 text-red-700 border border-red-200"
-                      : "bg-green-50 text-green-700 border border-green-200"
+                      ? "bg-destructive/10 text-destructive border border-destructive/50"
+                      : "bg-green-500/10 text-green-500 border border-green-500/50"
                   }`}
                 >
                   <div className="font-medium mb-1">{pdfUploadResult.message}</div>
@@ -1730,7 +1795,7 @@ export default function Home() {
                 </div>
               )}
 
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-end gap-2 border-t border-border pt-4">
                 <Button
                   onClick={() => {
                     setIsManualAddPdfDialogOpen(false)
@@ -1738,7 +1803,7 @@ export default function Home() {
                     setPdfUploadResult(null)
                   }}
                   variant="outline"
-                  className="border-gray-300 hover:bg-gray-50 text-gray-700"
+                  className="border-border hover:bg-secondary text-foreground"
                   disabled={isUploadingPdf}
                 >
                   Cancel
@@ -1746,7 +1811,7 @@ export default function Home() {
                 <Button
                   onClick={addManualPdf}
                   disabled={isUploadingPdf || !selectedPdfFile}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   {isUploadingPdf ? (
                     <>
@@ -1765,8 +1830,8 @@ export default function Home() {
         <Dialog open={isBatchDialogOpen} onOpenChange={setIsBatchDialogOpen}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle className="text-xl font-semibold text-black">Batch Search</DialogTitle>
-              <DialogDescription className="text-gray-600">
+              <DialogTitle className="text-xl font-semibold text-foreground">Batch Search</DialogTitle>
+              <DialogDescription className="text-muted-foreground">
                 Enter multiple search queries, one per line. Each query will be processed using the current methodology.
               </DialogDescription>
             </DialogHeader>
@@ -1778,18 +1843,18 @@ export default function Home() {
 quebrada blanca protests
 pascua lama mining conflicts
 antamina community opposition`}
-                className="min-h-[200px] text-sm border-gray-300 focus:border-gray-400 focus:ring-0 rounded-md resize-none"
+                className="min-h-[200px] text-sm border-border bg-secondary focus:border-primary focus:ring-1 focus:ring-primary rounded-md resize-none text-foreground"
                 disabled={isBatchProcessing}
               />
-              <div className="flex justify-between items-center">
-                <div className="text-sm text-gray-500">
+              <div className="flex justify-between items-center border-t border-border pt-4">
+                <div className="text-sm text-muted-foreground">
                   {batchQueries.split("\n").filter((q) => q.trim().length > 0).length} queries
                 </div>
                 <div className="flex gap-2">
                   <Button
                     onClick={() => setIsBatchDialogOpen(false)}
                     variant="outline"
-                    className="border-gray-300 hover:bg-gray-50 text-gray-700"
+                    className="border-border hover:bg-secondary text-foreground"
                     disabled={isBatchProcessing}
                   >
                     Cancel
@@ -1797,7 +1862,7 @@ antamina community opposition`}
                   <Button
                     onClick={processBatchQueries}
                     disabled={isBatchProcessing || !batchQueries.trim()}
-                    className="bg-gray-600 hover:bg-gray-700 text-white"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
                   >
                     {isBatchProcessing ? (
                       <>
@@ -1817,15 +1882,15 @@ antamina community opposition`}
         <Dialog open={isDataParamsDialogOpen} onOpenChange={setIsDataParamsDialogOpen}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
             <DialogHeader>
-              <DialogTitle className="text-xl font-semibold text-black">Configure Data Parameters</DialogTitle>
-              <DialogDescription className="text-gray-600">
+              <DialogTitle className="text-xl font-semibold text-foreground">Configure Data Parameters</DialogTitle>
+              <DialogDescription className="text-muted-foreground">
                 Customize the CSV output columns and their descriptions. Drag to reorder, or use arrow buttons.
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <Badge variant="secondary" className="bg-gray-100 text-gray-700">
+                <Badge variant="secondary" className="bg-secondary text-muted-foreground border-0">
                   {dataParams.length} parameters
                 </Badge>
                 <div className="flex gap-2">
@@ -1834,7 +1899,7 @@ antamina community opposition`}
                     variant="ghost"
                     size="sm"
                     onClick={resetDataParams}
-                    className="text-xs text-gray-500 hover:text-gray-700"
+                    className="text-xs text-muted-foreground hover:text-foreground"
                   >
                     Reset to default
                   </Button>
@@ -1843,7 +1908,7 @@ antamina community opposition`}
                     variant="outline"
                     size="sm"
                     onClick={addParam}
-                    className="text-xs border-gray-300 hover:bg-gray-50 text-gray-700 bg-transparent"
+                    className="text-xs border-border hover:bg-secondary text-foreground bg-transparent"
                   >
                     <Plus className="w-3 h-3 mr-1" />
                     Add Parameter
@@ -1851,11 +1916,11 @@ antamina community opposition`}
                 </div>
               </div>
 
-              <div className="max-h-[50vh] overflow-y-auto space-y-2 pr-2">
+              <div className="space-y-2 max-h-[50vh] overflow-y-auto custom-scrollbar pr-2">
                 {dataParams.map((param, index) => (
                   <div
                     key={param.id}
-                    className="border border-gray-200 rounded-md p-3 bg-white hover:bg-gray-50 transition-colors"
+                    className="border border-border rounded-md p-3 bg-secondary/30 hover:bg-secondary/50 transition-colors"
                   >
                     <div className="flex items-start gap-2">
                       <div className="flex flex-col gap-1 pt-2">
@@ -1865,18 +1930,18 @@ antamina community opposition`}
                           size="sm"
                           onClick={() => moveParamUp(index)}
                           disabled={index === 0}
-                          className="h-6 w-6 p-0 text-gray-400 hover:text-gray-700 disabled:opacity-30"
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground disabled:opacity-50"
                         >
                           <ArrowUp className="w-3 h-3" />
                         </Button>
-                        <GripVertical className="w-4 h-4 text-gray-300" />
+                        <GripVertical className="w-4 h-4 text-border" />
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
                           onClick={() => moveParamDown(index)}
                           disabled={index === dataParams.length - 1}
-                          className="h-6 w-6 p-0 text-gray-400 hover:text-gray-700 disabled:opacity-30"
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground disabled:opacity-50"
                         >
                           <ArrowDown className="w-3 h-3" />
                         </Button>
@@ -1887,13 +1952,13 @@ antamina community opposition`}
                           placeholder="Parameter name (e.g., company, date, country)"
                           value={param.name}
                           onChange={(e) => updateParam(param.id, "name", e.target.value)}
-                          className="text-sm border-gray-300 focus:border-gray-400 focus:ring-0 rounded-md font-medium"
+                          className="text-sm border-border bg-secondary focus:border-primary focus:ring-1 focus:ring-primary rounded-md font-medium text-foreground"
                         />
                         <Textarea
                           placeholder="Parameter description..."
                           value={param.description}
                           onChange={(e) => updateParam(param.id, "description", e.target.value)}
-                          className="min-h-[60px] text-sm border-gray-300 focus:border-gray-400 focus:ring-0 rounded-md resize-none"
+                          className="min-h-[60px] text-sm border-border bg-secondary focus:border-primary focus:ring-1 focus:ring-primary rounded-md resize-none text-foreground"
                         />
                       </div>
 
@@ -1902,7 +1967,7 @@ antamina community opposition`}
                         variant="ghost"
                         size="sm"
                         onClick={() => deleteParam(param.id)}
-                        className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 mt-1"
+                        className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 mt-1"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -1911,11 +1976,11 @@ antamina community opposition`}
                 ))}
               </div>
 
-              <div className="flex justify-end gap-2 pt-4 border-t border-gray-200">
+              <div className="flex justify-end gap-2 border-t border-border pt-4">
                 <Button
                   onClick={() => setIsDataParamsDialogOpen(false)}
                   variant="outline"
-                  className="border-gray-300 hover:bg-gray-50 text-gray-700"
+                  className="border-border hover:bg-secondary text-foreground"
                   disabled={isProcessing}
                 >
                   Cancel
@@ -1923,7 +1988,7 @@ antamina community opposition`}
                 <Button
                   onClick={processWithDataParams}
                   disabled={isProcessing}
-                  className="bg-gray-600 hover:bg-gray-700 text-white"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   {isProcessing ? (
                     <>
@@ -1941,18 +2006,20 @@ antamina community opposition`}
 
         <div className="mb-8 space-y-4">
           <div className="flex items-center gap-2 mb-4">
-            <Globe className="w-5 h-5 text-gray-600" />
-            <h2 className="text-lg font-medium text-black">AI Search</h2>
+            <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center">
+              <Globe className="w-5 h-5 text-primary" />
+            </div>
+            <h2 className="text-lg font-semibold text-foreground">AI-Powered Research</h2>
           </div>
 
           <form onSubmit={handleSubmit} className="flex gap-3">
             <div className="flex-1 relative">
               <Input
                 type="text"
-                placeholder="Enter search query..."
+                placeholder="Enter research query..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="h-11 text-base border-gray-300 focus:border-gray-400 focus:ring-0 rounded-md pr-12"
+                className="h-11 text-base border-border bg-secondary focus:border-primary focus:ring-1 focus:ring-primary rounded-md pr-12 text-foreground placeholder:text-muted-foreground"
                 disabled={isSearching}
               />
               <Button
@@ -1960,7 +2027,7 @@ antamina community opposition`}
                 onClick={() => setIsBatchDialogOpen(true)}
                 variant="ghost"
                 size="sm"
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-9 w-9 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-9 w-9 p-0 text-muted-foreground hover:text-foreground hover:bg-secondary"
                 disabled={isSearching}
               >
                 <List className="w-4 h-4" />
@@ -1970,7 +2037,7 @@ antamina community opposition`}
               type="button"
               onClick={() => setIsMethodologyOpen(!isMethodologyOpen)}
               variant="outline"
-              className="h-11 px-4 border-gray-300 hover:bg-gray-50 text-gray-700 rounded-md"
+              className="h-11 px-4 border-border hover:bg-secondary text-foreground rounded-md"
               disabled={isSearching}
             >
               <Settings className="w-4 h-4 mr-2" />
@@ -1980,7 +2047,7 @@ antamina community opposition`}
             <Button
               type="submit"
               disabled={!query.trim() || isSearching}
-              className="h-11 px-6 bg-gray-600 hover:bg-gray-700 text-white rounded-md font-medium"
+              className="h-11 px-6 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md font-medium"
             >
               {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
             </Button>
@@ -1991,18 +2058,18 @@ antamina community opposition`}
               isMethodologyOpen ? "max-h-[800px] opacity-100" : "max-h-0 opacity-0"
             }`}
           >
-            <Card className="border border-gray-200 shadow-none">
+            <Card className="border-border bg-card shadow-lg">
               <CardContent className="p-4">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-gray-700">Research Methodology Rules</label>
+                    <label className="text-sm font-medium text-foreground">Research Methodology Rules</label>
                     <div className="flex gap-2">
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         onClick={resetToDefault}
-                        className="text-xs text-gray-500 hover:text-gray-700 h-auto p-1"
+                        className="text-xs text-muted-foreground hover:text-foreground h-auto p-1"
                       >
                         Reset to default
                       </Button>
@@ -2011,7 +2078,7 @@ antamina community opposition`}
                         variant="outline"
                         size="sm"
                         onClick={addRule}
-                        className="text-xs border-gray-300 hover:bg-gray-50 text-gray-700 h-auto px-2 py-1 bg-transparent"
+                        className="text-xs border-border hover:bg-secondary text-foreground h-auto px-2 py-1 bg-transparent"
                       >
                         <Plus className="w-3 h-3 mr-1" />
                         Add Rule
@@ -2021,8 +2088,8 @@ antamina community opposition`}
 
                   <div className="flex gap-2 flex-wrap">
                     <div className="flex items-center gap-2 mr-4">
-                      <BookOpen className="w-4 h-4 text-gray-500" />
-                      <span className="text-sm text-gray-600">Quick presets:</span>
+                      <BookOpen className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Quick presets:</span>
                     </div>
                     {Object.entries(PRESETS).map(([key, value], index) => (
                       <Button
@@ -2031,8 +2098,8 @@ antamina community opposition`}
                         variant="outline"
                         size="sm"
                         onClick={() => handlePresetSelect(key as keyof typeof PRESETS)}
-                        className={`text-xs border-gray-300 hover:bg-gray-50 text-gray-700 ${
-                          selectedPreset === key ? "bg-blue-50 border-blue-300 text-blue-700" : ""
+                        className={`text-xs border-border hover:bg-secondary text-foreground ${
+                          selectedPreset === key ? "bg-primary/20 border-primary text-primary" : ""
                         }`}
                         disabled={isSearching}
                       >
@@ -2041,18 +2108,18 @@ antamina community opposition`}
                     ))}
                   </div>
 
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                  <div className="space-y-3 max-h-96 overflow-y-auto custom-scrollbar">
                     {methodologyRules.map((rule) => (
-                      <div key={rule.id} className="border border-gray-200 rounded-md p-3 space-y-2">
+                      <div key={rule.id} className="border border-border bg-secondary/30 rounded-md p-3 space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-gray-700">Rule {rule.id}</span>
+                          <span className="text-sm font-medium text-foreground">Rule {rule.id}</span>
                           {methodologyRules.length > 1 && (
                             <Button
                               type="button"
                               variant="ghost"
                               size="sm"
                               onClick={() => removeRule(rule.id)}
-                              className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                              className="h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                             >
                               <X className="w-3 h-3" />
                             </Button>
@@ -2063,14 +2130,14 @@ antamina community opposition`}
                             placeholder="Rule title (e.g., Goal, Relevance, Sources)"
                             value={rule.title}
                             onChange={(e) => updateRule(rule.id, "title", e.target.value)}
-                            className="text-sm border-gray-300 focus:border-gray-400 focus:ring-0 rounded-md"
+                            className="text-sm border-border bg-secondary focus:border-primary focus:ring-1 focus:ring-primary rounded-md text-foreground"
                             disabled={isSearching}
                           />
                           <Textarea
                             placeholder="Rule content..."
                             value={rule.content}
                             onChange={(e) => updateRule(rule.id, "content", e.target.value)}
-                            className="min-h-[60px] text-sm border-gray-300 focus:border-gray-400 focus:ring-0 rounded-md resize-none"
+                            className="min-h-[60px] text-sm border-border bg-secondary focus:border-primary focus:ring-1 focus:ring-primary rounded-md resize-none text-foreground"
                             disabled={isSearching}
                           />
                         </div>
@@ -2078,18 +2145,18 @@ antamina community opposition`}
                     ))}
                   </div>
 
-                  <div className="border-2 border-blue-200 bg-blue-50/30 rounded-md p-4 space-y-3">
+                  <div className="border-2 border-primary/30 bg-primary/5 rounded-md p-4 space-y-3">
                     <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-blue-600" />
-                      <span className="text-sm font-medium text-gray-700">Time Period (Global Rule)</span>
-                      <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-xs">
+                      <Calendar className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-medium text-foreground">Time Period (Global Rule)</span>
+                      <Badge variant="secondary" className="bg-primary/20 text-primary text-xs border-0">
                         Required
                       </Badge>
                     </div>
                     <div className="space-y-4">
-                      <div className="flex items-center justify-between text-sm text-gray-600">
+                      <div className="flex items-center justify-between text-sm text-foreground">
                         <span className="font-medium">{timeRange[0]}</span>
-                        <span className="text-xs text-gray-500">to</span>
+                        <span className="text-xs text-muted-foreground">to</span>
                         <span className="font-medium">{timeRange[1]}</span>
                       </div>
                       <Slider
@@ -2102,11 +2169,11 @@ antamina community opposition`}
                         className="w-full"
                         disabled={isSearching}
                       />
-                      <div className="flex justify-between text-xs text-gray-500">
+                      <div className="flex justify-between text-xs text-muted-foreground">
                         <span>2002</span>
                         <span>2025</span>
                       </div>
-                      <p className="text-xs text-gray-600 italic">
+                      <p className="text-xs text-muted-foreground italic">
                         Search results will be limited to events between {timeRange[0]} and {timeRange[1]}.
                       </p>
                     </div>
@@ -2118,7 +2185,7 @@ antamina community opposition`}
                       onClick={() => setIsMethodologyOpen(false)}
                       variant="outline"
                       size="sm"
-                      className="text-sm border-gray-300 hover:bg-gray-50 text-gray-700"
+                      className="text-sm border-border hover:bg-secondary text-foreground"
                     >
                       Done
                     </Button>
@@ -2129,25 +2196,33 @@ antamina community opposition`}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div>
             <div className="flex items-center gap-2 mb-4">
               <Circle
-                className={`w-2 h-2 ${isSearching ? "fill-green-500 text-green-500" : "fill-gray-400 text-gray-400"}`}
+                className={`w-2 h-2 ${isSearching ? "fill-primary text-primary animate-pulse" : "fill-muted-foreground text-muted-foreground"}`}
               />
-              <h2 className="text-lg font-medium text-black">Live Research Log</h2>
+              <h2 className="text-base font-semibold text-foreground">Live Research Log</h2>
+              {isSearching && (
+                <Badge variant="secondary" className="bg-primary/20 text-primary border-0 text-xs">
+                  Active
+                </Badge>
+              )}
             </div>
 
-            <Card className="border border-gray-200 shadow-none">
+            <Card className="border-border bg-card shadow-lg">
               <CardContent className="p-0">
-                <div className="bg-gray-50 border-b border-gray-200 p-4 h-96 overflow-y-auto font-mono text-sm">
+                <div className="bg-secondary/50 border-b border-border p-4 h-96 overflow-y-auto font-mono text-xs custom-scrollbar">
                   {logs.length === 0 ? (
-                    <div className="text-gray-500 text-center mt-20">Enter a query and click search to begin</div>
+                    <div className="text-muted-foreground text-center mt-32">
+                      <Circle className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">Enter a query and click search to begin</p>
+                    </div>
                   ) : (
                     <div className="space-y-1">
                       {logs.map((log, i) => (
-                        <div key={i} className="flex items-start gap-3 text-gray-700">
-                          <span className="flex-shrink-0 mt-0.5 text-gray-500">{getLogIcon(log)}</span>
+                        <div key={i} className="flex items-start gap-3 text-foreground/80">
+                          <span className="flex-shrink-0 mt-0.5 text-muted-foreground">{getLogIcon(log)}</span>
                           <span className="flex-1">{cleanLogText(log)}</span>
                         </div>
                       ))}
@@ -2161,47 +2236,53 @@ antamina community opposition`}
 
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <h2 className="text-lg font-medium text-black">Search Results</h2>
+              <h2 className="text-base font-semibold text-foreground">Search Results</h2>
               {searchResults.length > 0 && (
-                <Badge variant="secondary" className="bg-gray-100 text-gray-700 hover:bg-gray-100">
+                <Badge variant="secondary" className="bg-secondary text-muted-foreground border-0">
                   {searchResults.length} results
                 </Badge>
               )}
             </div>
 
-            <Card className="border border-gray-200 shadow-none">
+            <Card className="border-border bg-card shadow-lg">
               <CardContent className="p-0">
-                <div className="h-96 overflow-y-auto">
+                <div className="h-96 overflow-y-auto custom-scrollbar">
                   {searchResults.length === 0 ? (
-                    <div className="text-gray-500 text-center mt-20 p-6">
+                    <div className="text-muted-foreground text-center mt-32 p-6">
                       {isSearching ? (
-                        <div className="flex items-center justify-center gap-2">
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Waiting for results...
+                        <div className="flex flex-col items-center gap-3">
+                          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                          <p className="text-sm">Analyzing and gathering results...</p>
                         </div>
                       ) : (
-                        "Results will appear here after research is complete"
+                        <>
+                          <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">Results will appear here after research is complete</p>
+                        </>
                       )}
                     </div>
                   ) : (
-                    <div className="divide-y divide-gray-200">
+                    <div className="divide-y divide-border">
                       {searchResults.map((result, i) => (
-                        <div key={i} className="p-4 hover:bg-gray-50 transition-colors">
+                        <div key={i} className="p-4 hover:bg-secondary/50 transition-colors">
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1 space-y-2">
-                              <h3 className="font-medium text-black leading-tight">{result.title}</h3>
-                              <p className="text-sm text-gray-600 leading-relaxed">{result.snippet}</p>
+                              <h3 className="font-medium text-foreground leading-tight">{result.title}</h3>
+                              <p className="text-sm text-muted-foreground leading-relaxed">{result.snippet}</p>
                               <div className="flex items-center gap-2">
-                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                                <Badge
+                                  variant="secondary"
+                                  className="text-xs bg-secondary text-muted-foreground border-0"
+                                >
                                   {result.url ? new URL(result.url).hostname : "Unknown"}
-                                </span>
+                                </Badge>
                               </div>
                             </div>
                             <Button
                               variant="ghost"
                               size="sm"
                               asChild
-                              className="flex-shrink-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                              className="text-muted-foreground hover:text-foreground hover:bg-secondary"
                             >
                               <a
                                 href={result.url}
