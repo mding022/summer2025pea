@@ -171,6 +171,8 @@ const dataParamsToText = (params: DataParam[]): string => {
 
 const PRESET_CATEGORIES = ["Protest Events", "Institutional Demands", "Institutional Responses"]
 
+const PUBLIC_PRESET_CATEGORIES = ["Protest", "Conflict", "War"]
+
 const PRESETS = {
   preset1: [
     {
@@ -249,6 +251,87 @@ const PRESETS = {
   ],
 }
 
+const PUBLIC_PRESETS = {
+  protest: [
+    {
+      id: "1",
+      title: "Methodology",
+      content:
+        "Search for protest events and demonstrations. Focus on public gatherings, marches, strikes, and other forms of collective action where groups express dissent or make demands on authorities.",
+    },
+    {
+      id: "2",
+      title: "Event Types",
+      content:
+        "Include peaceful protests, demonstrations, sit-ins, marches, rallies, strikes, boycotts, and civil disobedience actions. Document the scale, participants, and demands of each event.",
+    },
+    {
+      id: "3",
+      title: "Key Information",
+      content:
+        "Focus on gathering details about: date and location, number of participants, organizing groups, stated demands or grievances, government or institutional response, and outcomes or resolutions.",
+    },
+    {
+      id: "4",
+      title: "Sources",
+      content:
+        "Prioritize news agencies, social media reports, NGO documentation, and official statements from organizing groups or government authorities.",
+    },
+  ],
+  conflict: [
+    {
+      id: "1",
+      title: "Methodology",
+      content:
+        "Search for conflicts including armed confrontations, territorial disputes, ethnic tensions, and violent clashes between groups, organizations, or nations.",
+    },
+    {
+      id: "2",
+      title: "Conflict Categories",
+      content:
+        "Include interstate conflicts, civil wars, insurgencies, territorial disputes, ethnic or religious conflicts, and resource-based conflicts. Document the parties involved and their motivations.",
+    },
+    {
+      id: "3",
+      title: "Key Information",
+      content:
+        "Focus on: conflict timeline and escalation patterns, parties involved and their objectives, casualties and humanitarian impact, international involvement or mediation efforts, peace negotiations or ceasefires.",
+    },
+    {
+      id: "4",
+      title: "Sources",
+      content:
+        "Prioritize international news agencies, conflict monitoring organizations (ACLED, UCDP), humanitarian organizations, government statements, and verified field reports.",
+    },
+  ],
+  war: [
+    {
+      id: "1",
+      title: "Methodology",
+      content:
+        "Search for military conflicts, warfare, and large-scale armed confrontations between nations or organized military forces. Include both conventional and unconventional warfare.",
+    },
+    {
+      id: "2",
+      title: "Warfare Types",
+      content:
+        "Include conventional warfare, guerrilla warfare, cyber warfare, proxy wars, civil wars with military involvement, and peacekeeping operations. Document military strategies and operations.",
+    },
+    {
+      id: "3",
+      title: "Key Information",
+      content:
+        "Focus on: military operations and battles, troop movements and deployments, weaponry and military technology used, civilian casualties and war crimes, international laws and conventions, post-war reconstruction and peace agreements.",
+    },
+    {
+      id: "4",
+      title: "Sources",
+      content:
+        "Prioritize military reports, international organizations (UN, NATO, ICRC), defense ministries, investigative journalism, war correspondents, and verified satellite imagery analysis.",
+    },
+  ],
+}
+
 const COUNTRIES = [
   { code: "AR", name: "Argentina" },
   { code: "CI", name: "Chile" },
@@ -258,6 +341,7 @@ const COUNTRIES = [
 const KEYWORD_TYPES = ["mining", "demand", "response"]
 
 export default function Home() {
+  const [mode, setMode] = useState<"public" | "private">("private")
   const [query, setQuery] = useState("")
   const [methodologyRules, setMethodologyRules] = useState<Rule[]>(DEFAULT_METHODOLOGY_RULES)
   const [isMethodologyOpen, setIsMethodologyOpen] = useState(false)
@@ -885,9 +969,18 @@ export default function Home() {
     startGdeltSearch()
   }
 
-  const handlePresetSelect = (presetKey: keyof typeof PRESETS) => {
-    setMethodologyRules(PRESETS[presetKey])
+  const handlePresetSelect = (presetKey: string) => {
+    if (mode === "private") {
+      setMethodologyRules(PRESETS[presetKey as keyof typeof PRESETS])
+    } else {
+      setMethodologyRules(PUBLIC_PRESETS[presetKey as keyof typeof PUBLIC_PRESETS])
+    }
     setSelectedPreset(presetKey)
+  }
+
+  const handleModeToggle = (newMode: "public" | "private") => {
+    setMode(newMode)
+    setSelectedPreset(null)
   }
 
   const handleDatabaseToggle = () => {
@@ -1063,28 +1156,51 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="border-b border-border bg-card">
-        <div className="max-w-7xl mx-auto px-6 py-4">
+      <div className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+        <div className="max-w-[1600px] mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center">
-                <Database className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <div>
-                <h1 className="text-lg font-semibold text-foreground">PEIDIR Research Model</h1>
-                <p className="text-xs text-muted-foreground">Agential Research & Data Analysis Platform</p>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Search className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h1 className="text-lg font-semibold text-foreground">PEIDIR Research</h1>
+                  <p className="text-xs text-muted-foreground">Agential Research & Data Analysis Platform</p>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-xs border-border text-muted-foreground">
-                Production
-              </Badge>
+            <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleModeToggle("public")}
+                className={`text-xs h-7 px-3 transition-all ${
+                  mode === "public"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Public
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleModeToggle("private")}
+                className={`text-xs h-7 px-3 transition-all ${
+                  mode === "private"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Private
+              </Button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-[1600px] mx-auto px-6 py-8">
         <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-3">
           <Button
             type="button"
@@ -2091,21 +2207,37 @@ antamina community opposition`}
                       <BookOpen className="w-4 h-4 text-muted-foreground" />
                       <span className="text-sm text-muted-foreground">Quick presets:</span>
                     </div>
-                    {Object.entries(PRESETS).map(([key, value], index) => (
-                      <Button
-                        key={key}
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handlePresetSelect(key as keyof typeof PRESETS)}
-                        className={`text-xs border-border hover:bg-secondary text-foreground ${
-                          selectedPreset === key ? "bg-primary/20 border-primary text-primary" : ""
-                        }`}
-                        disabled={isSearching}
-                      >
-                        {PRESET_CATEGORIES[index]}
-                      </Button>
-                    ))}
+                    {mode === "private"
+                      ? Object.entries(PRESETS).map(([key, value], index) => (
+                          <Button
+                            key={key}
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePresetSelect(key)}
+                            className={`text-xs border-border hover:bg-secondary text-foreground ${
+                              selectedPreset === key ? "bg-primary/20 border-primary text-primary" : ""
+                            }`}
+                            disabled={isSearching}
+                          >
+                            {PRESET_CATEGORIES[index]}
+                          </Button>
+                        ))
+                      : Object.entries(PUBLIC_PRESETS).map(([key, value], index) => (
+                          <Button
+                            key={key}
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePresetSelect(key)}
+                            className={`text-xs border-border hover:bg-secondary text-foreground ${
+                              selectedPreset === key ? "bg-primary/20 border-primary text-primary" : ""
+                            }`}
+                            disabled={isSearching}
+                          >
+                            {PUBLIC_PRESET_CATEGORIES[index]}
+                          </Button>
+                        ))}
                   </div>
 
                   <div className="space-y-3 max-h-96 overflow-y-auto custom-scrollbar">
