@@ -81,9 +81,9 @@ Since the AI model is based on a feedback loop that iteratively performs searche
 
 The search model is using the most recent Gemini model \`gemini-2.5-flash\` , since it has more capable reasoning and logic capabilities. Note that data extraction and compilation does not require these capabilities.
 
-## Analyzing time series data to detect anomalies
+## Analyzing GDELT time series data to detect anomalies
 
-The event detection algorithm operates on time-series data representing daily media coverage volumes for a given query. The underlying mathematical approach combines time-series decomposition and statistical anomaly detection to isolate significant surges in attention from normal background fluctuations.
+The event detection algorithm operates on time-series data from GDELT 2.0's Doc API representing daily media coverage volumes for a given query. The underlying mathematical approach combines time-series decomposition and statistical anomaly detection to isolate significant surges in attention from normal background fluctuations (for example, quarterly earnings filings from companies).
 
 ### 1. Decomposition
 
@@ -104,9 +104,7 @@ The residual component \( R_t \) is the focus of anomaly detection since it repr
 
 To quantify how unusual each residual is, the algorithm standardizes \( R_t \) using a **z-score**, defined as:
 
-\[
-z_t = \frac{R_t - \mu_R}{\sigma_R}
-\]
+z_t = (R_t - μ_R) / σ_R
 
 where:
 - \( \mu_R \) is the mean of all residuals,
