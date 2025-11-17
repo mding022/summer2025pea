@@ -19,6 +19,8 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Toolti
 import Shepherd from "shepherd.js"
 import "shepherd.js/dist/css/shepherd.css"
 
+export const runtime = 'edge';
+
 // const BASE_URL = "http://localhost:8000"
 const BASE_URL = "https://s25api.millerding.com"
 

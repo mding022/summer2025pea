@@ -135,7 +135,7 @@ This method identifies time periods where observed media coverage sharply exceed
 
 `
 
-
+export const runtime = 'edge';
 
 export default function MarkdownViewer() {
   return (
