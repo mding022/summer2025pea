@@ -10,34 +10,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Slider } from "@/components/ui/slider"
-import {
-  Search,
-  ExternalLink,
-  Loader2,
-  Circle,
-  Settings,
-  ChevronDown,
-  ChevronUp,
-  BookOpen,
-  Database,
-  Trash2,
-  RefreshCw,
-  FileText,
-  List,
-  Plus,
-  X,
-  Globe,
-  FolderOpen,
-  Download,
-  Calendar,
-  GripVertical,
-  ArrowUp,
-  ArrowDown,
-  BarChart3,
-} from "lucide-react"
+import { Search, ExternalLink, Loader2, Circle, Settings, ChevronDown, ChevronUp, BookOpen, Database, Trash2, RefreshCw, FileText, List, Plus, X, Globe, FolderOpen, Download, Calendar, GripVertical, ArrowUp, ArrowDown, BarChart3, HelpCircle } from 'lucide-react'
 
 // Import necessary charting components
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts"
+
+// Import shepherd.js
+import Shepherd from "shepherd.js"
+import "shepherd.js/dist/css/shepherd.css"
 
 // const BASE_URL = "http://localhost:8000"
 const BASE_URL = "https://s25api.millerding.com"
@@ -269,7 +249,7 @@ const PUBLIC_PRESETS = {
       id: "3",
       title: "Key Information",
       content:
-        "Focus on gathering details about: date and location, number of participants, organizing groups, stated demands or grievances, government or institutional response, and outcomes or resolutions.",
+        "Focus on: date and location, number of participants, organizing groups, stated demands or grievances, government or institutional response, and outcomes or resolutions.",
     },
     {
       id: "4",
@@ -327,7 +307,7 @@ const PUBLIC_PRESETS = {
       id: "4",
       title: "Sources",
       content:
-        "Prioritize military reports, international organizations (UN, NATO, ICRC), defense ministries, investigative journalism, war correspondents, and verified satellite imagery analysis.",
+        "Prioritize military reports, international organizations (UN, ICRC), defense ministries, investigative journalism, war correspondents, and verified satellite imagery analysis.",
     },
   ],
 }
@@ -409,6 +389,259 @@ export default function Home() {
     scrollToBottom()
   }, [logs])
 
+  useEffect(() => {
+    // Import shepherd.js CSS in useEffect to avoid SSR issues
+    const style = document.createElement("style")
+    style.textContent = `
+      .shepherd-modal-overlay-container {
+        z-index: 9998 !important;
+      }
+      .shepherd-element {
+        z-index: 9999 !important;
+        max-width: 400px;
+      }
+      .shepherd-content {
+        background: hsl(var(--card)) !important;
+        border: 1px solid hsl(var(--border)) !important;
+        border-radius: 8px !important;
+        color: hsl(var(--foreground)) !important;
+      }
+      .shepherd-header {
+        background: hsl(var(--secondary)) !important;
+        padding: 16px !important;
+        border-bottom: 1px solid hsl(var(--border)) !important;
+      }
+      .shepherd-title {
+        color: hsl(var(--foreground)) !important;
+        font-weight: 600 !important;
+        font-size: 16px !important;
+      }
+      .shepherd-text {
+        padding: 16px !important;
+        color: hsl(var(--muted-foreground)) !important;
+        font-size: 14px !important;
+        line-height: 1.5 !important;
+      }
+      .shepherd-footer {
+        padding: 12px 16px !important;
+        border-top: 1px solid hsl(var(--border)) !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+      }
+      .shepherd-button {
+        background: hsl(var(--primary)) !important;
+        color: hsl(var(--primary-foreground)) !important;
+        border: none !important;
+        padding: 8px 16px !important;
+        border-radius: 6px !important;
+        font-size: 14px !important;
+        cursor: pointer !important;
+        transition: opacity 0.2s !important;
+      }
+      .shepherd-button:hover {
+        opacity: 0.9 !important;
+      }
+      .shepherd-button-secondary {
+        background: transparent !important;
+        color: hsl(var(--muted-foreground)) !important;
+        border: 1px solid hsl(var(--border)) !important;
+      }
+      .shepherd-cancel-icon {
+        color: hsl(var(--muted-foreground)) !important;
+      }
+      .shepherd-arrow:before {
+        background: hsl(var(--card)) !important;
+        border: 1px solid hsl(var(--border)) !important;
+      }
+    `
+    document.head.appendChild(style)
+
+    return () => {
+      document.head.removeChild(style)
+    }
+  }, [])
+
+  const startTour = () => {
+    setIsDatabaseOpen(true)
+    
+    const tour = new Shepherd.Tour({
+      useModalOverlay: true,
+      defaultStepOptions: {
+        classes: "shadow-lg",
+        scrollTo: { behavior: "smooth", block: "center" },
+        cancelIcon: {
+          enabled: true,
+        },
+      },
+    })
+
+    tour.addStep({
+      id: "search-bar",
+      title: "AI-Powered Research Search",
+      text: "Enter your research queries here. Our AI will search and analyze relevant content from across the web, helping you find the information you need quickly.",
+      attachTo: {
+        element: "[data-tour='search-input']",
+        on: "bottom",
+      },
+      buttons: [
+        {
+          text: "Next",
+          action: tour.next,
+        },
+      ],
+    })
+
+    tour.addStep({
+      id: "methodology",
+      title: "Methodology Configuration",
+      text: "Click here to configure your research methodology. Define custom rules, select presets, and set time periods to refine your search parameters.",
+      attachTo: {
+        element: "[data-tour='methodology-button']",
+        on: "bottom",
+      },
+      buttons: [
+        {
+          text: "Back",
+          action: tour.back,
+          classes: "shepherd-button-secondary",
+        },
+        {
+          text: "Next",
+          action: tour.next,
+        },
+      ],
+    })
+
+    tour.addStep({
+      id: "database",
+      title: "Database Management",
+      text: "Access your database of collected research results here. View, manage, and organize all the sources you've gathered during your research sessions.",
+      attachTo: {
+        element: "[data-tour='database-toggle']",
+        on: "bottom",
+      },
+      buttons: [
+        {
+          text: "Back",
+          action: tour.back,
+          classes: "shepherd-button-secondary",
+        },
+        {
+          text: "Next",
+          action: tour.next,
+        },
+      ],
+    })
+
+    tour.addStep({
+      id: "add-url",
+      title: "Add Manual URL",
+      text: "Manually add specific URLs to your database. Perfect for including sources you've found outside of automated searches.",
+      attachTo: {
+        element: "[data-tour='add-url-button']",
+        on: "left",
+      },
+      buttons: [
+        {
+          text: "Back",
+          action: tour.back,
+          classes: "shepherd-button-secondary",
+        },
+        {
+          text: "Next",
+          action: tour.next,
+        },
+      ],
+    })
+
+    tour.addStep({
+      id: "add-pdf",
+      title: "Upload PDF Documents",
+      text: "Upload PDF files directly to your database. The system will extract and analyze the content for your research.",
+      attachTo: {
+        element: "[data-tour='add-pdf-button']",
+        on: "left",
+      },
+      buttons: [
+        {
+          text: "Back",
+          action: tour.back,
+          classes: "shepherd-button-secondary",
+        },
+        {
+          text: "Next",
+          action: tour.next,
+        },
+      ],
+    })
+
+    tour.addStep({
+      id: "clear-database",
+      title: "Clear Database",
+      text: "Remove all results from your current database session. Use this to start fresh with a new research project.",
+      attachTo: {
+        element: "[data-tour='clear-button']",
+        on: "left",
+      },
+      buttons: [
+        {
+          text: "Back",
+          action: tour.back,
+          classes: "shepherd-button-secondary",
+        },
+        {
+          text: "Next",
+          action: tour.next,
+        },
+      ],
+    })
+
+    tour.addStep({
+      id: "process",
+      title: "Process Database",
+      text: "Process all collected sources through AI analysis. Configure data parameters and generate structured CSV outputs with extracted insights.",
+      attachTo: {
+        element: "[data-tour='process-button']",
+        on: "left",
+      },
+      buttons: [
+        {
+          text: "Back",
+          action: tour.back,
+          classes: "shepherd-button-secondary",
+        },
+        {
+          text: "Next",
+          action: tour.next,
+        },
+      ],
+    })
+
+    tour.addStep({
+      id: "drive-files",
+      title: "Drive Files Browser",
+      text: "Access and view PDF files stored in your Google Drive. Browse your document collection organized by folder structure.",
+      attachTo: {
+        element: "[data-tour='drive-toggle']",
+        on: "bottom",
+      },
+      buttons: [
+        {
+          text: "Back",
+          action: tour.back,
+          classes: "shepherd-button-secondary",
+        },
+        {
+          text: "Finish",
+          action: tour.complete,
+        },
+      ],
+    })
+
+    tour.start()
+  }
+
   const parseCSV = (csvText: string): CSVData => {
     const lines = csvText.trim().split("\n")
 
@@ -456,8 +689,8 @@ export default function Home() {
         parsed = JSON.parse(rawJson)
       } catch {
         const cleaned = rawJson
-          .replace(/^```json/, "")
-          .replace(/```$/, "")
+          .replace(/^\`\`\`json/, "")
+          .replace(/\`\`\`$/, "")
           .replace(/^"|"$/g, "")
           .replace(/\\"/g, '"')
           .replace(/\\n/g, "\n")
@@ -1155,7 +1388,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground">
       <div className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
@@ -1169,6 +1402,15 @@ export default function Home() {
                   <p className="text-xs text-muted-foreground">Agential Research & Data Analysis Platform</p>
                 </div>
               </div>
+              <Button
+                onClick={startTour}
+                variant="outline"
+                size="sm"
+                className="border-border hover:bg-secondary text-muted-foreground hover:text-foreground"
+              >
+                <HelpCircle className="w-4 h-4 mr-2" />
+                Tour
+              </Button>
             </div>
             <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-1">
               <Button
@@ -1210,6 +1452,7 @@ export default function Home() {
               isDatabaseOpen ? "bg-secondary border-primary" : "bg-card"
             }`}
             disabled={isSearching}
+            data-tour="database-toggle"
           >
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center">
@@ -1231,6 +1474,7 @@ export default function Home() {
               isDriveOpen ? "bg-secondary border-primary" : "bg-card"
             }`}
             disabled={isSearching}
+            data-tour="drive-toggle"
           >
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center">
@@ -1289,6 +1533,7 @@ export default function Home() {
                     disabled={isProcessing || isLoadingDatabase}
                     size="sm"
                     className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                    data-tour="process-button"
                   >
                     {isProcessing ? (
                       <>
@@ -1326,6 +1571,7 @@ export default function Home() {
                     size="sm"
                     variant="outline"
                     className="border-border hover:bg-secondary text-foreground"
+                    data-tour="add-url-button"
                   >
                     <Plus className="w-3 h-3 mr-1" />
                     Add URL
@@ -1336,6 +1582,7 @@ export default function Home() {
                     size="sm"
                     variant="outline"
                     className="border-border hover:bg-secondary text-foreground"
+                    data-tour="add-pdf-button"
                   >
                     <Plus className="w-3 h-3 mr-1" />
                     Add PDF
@@ -1347,6 +1594,7 @@ export default function Home() {
                     size="sm"
                     variant="outline"
                     className="border-destructive/50 hover:bg-destructive/10 text-destructive bg-transparent"
+                    data-tour="clear-button"
                   >
                     {isClearingSession ? (
                       <>
@@ -1397,7 +1645,7 @@ export default function Home() {
                           <div className="flex-1 space-y-2">
                             <div className="flex items-center gap-2">
                               <h3 className="font-medium text-foreground leading-tight">{result.title}</h3>
-                              <Badge variant="outline" className="text-xs text-muted-foreground border-border">
+                              <Badge variant="secondary" className="bg-secondary text-muted-foreground border-0">
                                 #{result.id}
                               </Badge>
                             </div>
@@ -2129,7 +2377,7 @@ antamina community opposition`}
           </div>
 
           <form onSubmit={handleSubmit} className="flex gap-3">
-            <div className="flex-1 relative">
+            <div className="flex-1 relative" data-tour="search-input">
               <Input
                 type="text"
                 placeholder="Enter research query..."
@@ -2155,6 +2403,7 @@ antamina community opposition`}
               variant="outline"
               className="h-11 px-4 border-border hover:bg-secondary text-foreground rounded-md"
               disabled={isSearching}
+              data-tour="methodology-button"
             >
               <Settings className="w-4 h-4 mr-2" />
               Methodology
