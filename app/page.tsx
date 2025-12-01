@@ -8,9 +8,41 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
 import { Slider } from "@/components/ui/slider"
-import { Search, ExternalLink, Loader2, Circle, Settings, ChevronDown, ChevronUp, BookOpen, Database, Trash2, RefreshCw, FileText, List, Plus, X, Globe, FolderOpen, Download, Calendar, GripVertical, ArrowUp, ArrowDown, BarChart3, HelpCircle } from 'lucide-react'
+import {
+  Search,
+  ExternalLink,
+  Loader2,
+  Circle,
+  Settings,
+  ChevronDown,
+  ChevronUp,
+  BookOpen,
+  Database,
+  Trash2,
+  RefreshCw,
+  FileText,
+  List,
+  Plus,
+  X,
+  Globe,
+  FolderOpen,
+  Download,
+  Calendar,
+  GripVertical,
+  ArrowUp,
+  ArrowDown,
+  BarChart3,
+  HelpCircle,
+} from "lucide-react"
 
 // Import necessary charting components
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts"
@@ -19,7 +51,7 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Toolti
 import Shepherd from "shepherd.js"
 import "shepherd.js/dist/css/shepherd.css"
 
-export const runtime = 'edge';
+export const runtime = "edge"
 
 // const BASE_URL = "http://localhost:8000"
 const BASE_URL = "https://s25api.millerding.com"
@@ -63,6 +95,13 @@ interface Rule {
   id: string
   title: string
   content: string
+}
+
+interface ExampleUrl {
+  id: string
+  url: string
+  title: string
+  snippet: string
 }
 
 interface DataParam {
@@ -323,8 +362,8 @@ const COUNTRIES = [
 const KEYWORD_TYPES = ["mining", "demand", "response"]
 
 export default function Home() {
-  const [mode, setMode] = useState<"public" | "private">("private")
   const [query, setQuery] = useState("")
+  const [baseUrl, setBaseUrl] = useState("https://s25api.millerding.com")
   const [methodologyRules, setMethodologyRules] = useState<Rule[]>(DEFAULT_METHODOLOGY_RULES)
   const [isMethodologyOpen, setIsMethodologyOpen] = useState(false)
   const [isDatabaseOpen, setIsDatabaseOpen] = useState(false)
@@ -380,8 +419,15 @@ export default function Home() {
 
   const [timeRange, setTimeRange] = useState<[number, number]>([2002, 2019])
 
+  const [exampleUrls, setExampleUrls] = useState<ExampleUrl[]>([])
+  const [isExampleDialogOpen, setIsExampleDialogOpen] = useState(false)
+  const [exampleUrlInput, setExampleUrlInput] = useState("")
+  const [isLoadingExample, setIsLoadingExample] = useState(false)
+
   const [dataParams, setDataParams] = useState<DataParam[]>(() => parseDataParams(DEFAULT_DATA_PARAMS))
   const [isDataParamsDialogOpen, setIsDataParamsDialogOpen] = useState(false)
+
+  const [mode, setMode] = useState<"public" | "private">("private")
 
   const scrollToBottom = () => {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -466,7 +512,7 @@ export default function Home() {
 
   const startTour = () => {
     setIsDatabaseOpen(true)
-    
+
     const tour = new Shepherd.Tour({
       useModalOverlay: true,
       defaultStepOptions: {
@@ -691,8 +737,8 @@ export default function Home() {
         parsed = JSON.parse(rawJson)
       } catch {
         const cleaned = rawJson
-          .replace(/^\`\`\`json/, "")
-          .replace(/\`\`\`$/, "")
+          .replace(/^```json/, "")
+          .replace(/```$/, "")
           .replace(/^"|"$/g, "")
           .replace(/\\"/g, '"')
           .replace(/\\n/g, "\n")
@@ -710,20 +756,32 @@ export default function Home() {
     return null
   }
 
-  const convertRulesToXML = (rules: Rule[]): string => {
-    let xml = "<methodology>\n"
-    rules.forEach((rule) => {
-      xml += `  <rule id="${rule.id}">\n`
-      xml += `    <title>${rule.title}</title>\n`
-      xml += `    <content>${rule.content}</content>\n`
-      xml += `  </rule>\n`
+  const convertRulesToXML = (rules: Rule[]) => {
+    const allRules = [...rules]
+
+    if (exampleUrls.length > 0) {
+      const exampleUrlsContent = exampleUrls.map((ex) => ex.url).join(", ")
+      allRules.push({
+        id: "example_urls",
+        title: "Example URLs",
+        content: `Use these as examples for results expected from the search methodology: ${exampleUrlsContent}`,
+      })
+    }
+
+    allRules.push({
+      id: "time_period",
+      title: "Time Period",
+      content: `The time period to search in is between ${timeRange[0]} and ${timeRange[1]}.`,
     })
-    xml += `  <rule id="time_period">\n`
-    xml += `    <title>Time Period</title>\n`
-    xml += `    <content>The time period to search in is between ${timeRange[0]} and ${timeRange[1]}.</content>\n`
-    xml += `  </rule>\n`
-    xml += "</methodology>"
-    return xml
+
+    return allRules
+      .map(
+        (rule) => `<rule id="${rule.id}">
+  <title>${rule.title}</title>
+  <content>${rule.content}</content>
+</rule>`,
+      )
+      .join("\n")
   }
 
   const fetchDriveFiles = async () => {
@@ -1205,17 +1263,24 @@ export default function Home() {
   }
 
   const handlePresetSelect = (presetKey: string) => {
-    if (mode === "private") {
-      setMethodologyRules(PRESETS[presetKey as keyof typeof PRESETS])
-    } else {
-      setMethodologyRules(PUBLIC_PRESETS[presetKey as keyof typeof PUBLIC_PRESETS])
+    setSelectedPreset(presetKey as keyof typeof PRESETS | keyof typeof PUBLIC_PRESETS)
+    const presetRules =
+      mode === "private"
+        ? PRESETS[presetKey as keyof typeof PRESETS]
+        : PUBLIC_PRESETS[presetKey as keyof typeof PUBLIC_PRESETS]
+
+    if (presetRules) {
+      setMethodologyRules(presetRules)
     }
-    setSelectedPreset(presetKey)
+
+    setExampleUrls([])
   }
 
   const handleModeToggle = (newMode: "public" | "private") => {
     setMode(newMode)
     setSelectedPreset(null)
+    // Reset methodology rules to default when switching mode
+    setMethodologyRules(newMode === "private" ? DEFAULT_METHODOLOGY_RULES : PUBLIC_PRESETS["protest"]) // Default to protest for public mode
   }
 
   const handleDatabaseToggle = () => {
@@ -1268,8 +1333,9 @@ export default function Home() {
   }
 
   const resetToDefault = () => {
-    setMethodologyRules(DEFAULT_METHODOLOGY_RULES)
+    setMethodologyRules(mode === "private" ? DEFAULT_METHODOLOGY_RULES : PUBLIC_PRESETS["protest"]) // Default to protest for public mode
     setSelectedPreset(null)
+    setExampleUrls([])
   }
 
   const moveParamUp = (index: number) => {
@@ -1389,8 +1455,37 @@ export default function Home() {
     return actualFileName
   }
 
+  const handleAddExampleUrl = async () => {
+    if (!exampleUrlInput.trim()) return
+
+    setIsLoadingExample(true)
+    try {
+      const response = await fetch(`${baseUrl}/preview?url=${encodeURIComponent(exampleUrlInput)}`)
+      const data = await response.json()
+
+      const newExample: ExampleUrl = {
+        id: Date.now().toString(),
+        url: exampleUrlInput,
+        title: data.title || "No title",
+        snippet: data.snippet || "No snippet available",
+      }
+
+      setExampleUrls([...exampleUrls, newExample])
+      setExampleUrlInput("")
+    } catch (error) {
+      console.error("Error fetching example preview:", error)
+      alert("Failed to fetch preview for this URL")
+    } finally {
+      setIsLoadingExample(false)
+    }
+  }
+
+  const handleRemoveExampleUrl = (id: string) => {
+    setExampleUrls(exampleUrls.filter((ex) => ex.id !== id))
+  }
+
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
       <div className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
@@ -1408,7 +1503,7 @@ export default function Home() {
                 onClick={startTour}
                 variant="outline"
                 size="sm"
-                className="border-border hover:bg-secondary text-muted-foreground hover:text-foreground"
+                className="border-border hover:bg-secondary text-muted-foreground hover:text-foreground bg-transparent"
               >
                 <HelpCircle className="w-4 h-4 mr-2" />
                 Tour
@@ -1444,7 +1539,7 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="max-w-[1600px] mx-auto px-6 py-8">
+      <main className="flex-1 container mx-auto px-6 py-8 max-w-[1600px]">
         <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-3">
           <Button
             type="button"
@@ -2422,7 +2517,7 @@ antamina community opposition`}
 
           <div
             className={`overflow-hidden transition-all duration-300 ease-in-out ${
-              isMethodologyOpen ? "max-h-[800px] opacity-100" : "max-h-0 opacity-0"
+              isMethodologyOpen ? "max-h-[1200px] opacity-100" : "max-h-0 opacity-0"
             }`}
           >
             <Card className="border-border bg-card shadow-lg">
@@ -2562,6 +2657,62 @@ antamina community opposition`}
                     </div>
                   </div>
 
+                  {/* Provide Example Data section */}
+                  <div className="border-2 border-accent/30 bg-accent/5 rounded-md p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-accent" />
+                        <span className="text-sm font-medium text-foreground">Example Data</span>
+                        <Badge variant="secondary" className="bg-accent/20 text-accent text-xs border-0">
+                          Optional
+                        </Badge>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsExampleDialogOpen(true)}
+                        className="text-xs border-border hover:bg-secondary text-foreground h-auto px-2 py-1 bg-transparent"
+                      >
+                        <Plus className="w-3 h-3 mr-1" />
+                        Add Example URL
+                      </Button>
+                    </div>
+
+                    {exampleUrls.length > 0 ? (
+                      <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+                        {exampleUrls.map((example) => (
+                          <div
+                            key={example.id}
+                            className="border border-border bg-secondary/50 rounded-md p-3 space-y-1"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-foreground truncate">{example.title}</p>
+                                <p className="text-xs text-muted-foreground truncate">{example.url}</p>
+                                <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{example.snippet}</p>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRemoveExampleUrl(example.id)}
+                                className="h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
+                              >
+                                <X className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">
+                        No example URLs added. Click "Add Example URL" to provide reference articles that demonstrate
+                        the expected results.
+                      </p>
+                    )}
+                  </div>
+
                   <div className="flex justify-end">
                     <Button
                       type="button"
@@ -2577,116 +2728,163 @@ antamina community opposition`}
               </CardContent>
             </Card>
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <Circle
-                className={`w-2 h-2 ${isSearching ? "fill-primary text-primary animate-pulse" : "fill-muted-foreground text-muted-foreground"}`}
-              />
-              <h2 className="text-base font-semibold text-foreground">Live Research Log</h2>
-              {isSearching && (
-                <Badge variant="secondary" className="bg-primary/20 text-primary border-0 text-xs">
-                  Active
-                </Badge>
-              )}
-            </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <Circle
+                  className={`w-2 h-2 ${isSearching ? "fill-primary text-primary animate-pulse" : "fill-muted-foreground text-muted-foreground"}`}
+                />
+                <h2 className="text-base font-semibold text-foreground">Live Research Log</h2>
+                {isSearching && (
+                  <Badge variant="secondary" className="bg-primary/20 text-primary border-0 text-xs">
+                    Active
+                  </Badge>
+                )}
+              </div>
 
-            <Card className="border-border bg-card shadow-lg">
-              <CardContent className="p-0">
-                <div className="bg-secondary/50 border-b border-border p-4 h-96 overflow-y-auto font-mono text-xs custom-scrollbar">
-                  {logs.length === 0 ? (
-                    <div className="text-muted-foreground text-center mt-32">
-                      <Circle className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">Enter a query and click search to begin</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-1">
-                      {logs.map((log, i) => (
-                        <div key={i} className="flex items-start gap-3 text-foreground/80">
-                          <span className="flex-shrink-0 mt-0.5 text-muted-foreground">{getLogIcon(log)}</span>
-                          <span className="flex-1">{cleanLogText(log)}</span>
-                        </div>
-                      ))}
-                      <div ref={logsEndRef} />
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <h2 className="text-base font-semibold text-foreground">Search Results</h2>
-              {searchResults.length > 0 && (
-                <Badge variant="secondary" className="bg-secondary text-muted-foreground border-0">
-                  {searchResults.length} results
-                </Badge>
-              )}
-            </div>
-
-            <Card className="border-border bg-card shadow-lg">
-              <CardContent className="p-0">
-                <div className="h-96 overflow-y-auto custom-scrollbar">
-                  {searchResults.length === 0 ? (
-                    <div className="text-muted-foreground text-center mt-32 p-6">
-                      {isSearching ? (
-                        <div className="flex flex-col items-center gap-3">
-                          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                          <p className="text-sm">Analyzing and gathering results...</p>
-                        </div>
-                      ) : (
-                        <>
-                          <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                          <p className="text-sm">Results will appear here after research is complete</p>
-                        </>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-border">
-                      {searchResults.map((result, i) => (
-                        <div key={i} className="p-4 hover:bg-secondary/50 transition-colors">
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1 space-y-2">
-                              <h3 className="font-medium text-foreground leading-tight">{result.title}</h3>
-                              <p className="text-sm text-muted-foreground leading-relaxed">{result.snippet}</p>
-                              <div className="flex items-center gap-2">
-                                <Badge
-                                  variant="secondary"
-                                  className="text-xs bg-secondary text-muted-foreground border-0"
-                                >
-                                  {result.url ? new URL(result.url).hostname : "Unknown"}
-                                </Badge>
-                              </div>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              asChild
-                              className="text-muted-foreground hover:text-foreground hover:bg-secondary"
-                            >
-                              <a
-                                href={result.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-1"
-                              >
-                                <ExternalLink className="w-4 h-4" />
-                              </a>
-                            </Button>
+              <Card className="border-border bg-card shadow-lg">
+                <CardContent className="p-0">
+                  <div className="bg-secondary/50 border-b border-border p-4 h-96 overflow-y-auto font-mono text-xs custom-scrollbar">
+                    {logs.length === 0 ? (
+                      <div className="text-muted-foreground text-center mt-32">
+                        <Circle className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">Enter a query and click search to begin</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        {logs.map((log, i) => (
+                          <div key={i} className="flex items-start gap-3 text-foreground/80">
+                            <span className="flex-shrink-0 mt-0.5 text-muted-foreground">{getLogIcon(log)}</span>
+                            <span className="flex-1">{cleanLogText(log)}</span>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                        ))}
+                        <div ref={logsEndRef} />
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <h2 className="text-base font-semibold text-foreground">Search Results</h2>
+                {searchResults.length > 0 && (
+                  <Badge variant="secondary" className="bg-secondary text-muted-foreground border-0">
+                    {searchResults.length} results
+                  </Badge>
+                )}
+              </div>
+
+              <Card className="border-border bg-card shadow-lg">
+                <CardContent className="p-0">
+                  <div className="h-96 overflow-y-auto custom-scrollbar">
+                    {searchResults.length === 0 ? (
+                      <div className="text-muted-foreground text-center mt-32 p-6">
+                        {isSearching ? (
+                          <div className="flex flex-col items-center gap-3">
+                            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                            <p className="text-sm">Analyzing and gathering results...</p>
+                          </div>
+                        ) : (
+                          <>
+                            <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                            <p className="text-sm">Results will appear here after research is complete</p>
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-border">
+                        {searchResults.map((result, i) => (
+                          <div key={i} className="p-4 hover:bg-secondary/50 transition-colors">
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1 space-y-2">
+                                <h3 className="font-medium text-foreground leading-tight">{result.title}</h3>
+                                <p className="text-sm text-muted-foreground leading-relaxed">{result.snippet}</p>
+                                <div className="flex items-center gap-2">
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs bg-secondary text-muted-foreground border-0"
+                                  >
+                                    {result.url ? new URL(result.url).hostname : "Unknown"}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                asChild
+                                className="text-muted-foreground hover:text-foreground hover:bg-secondary"
+                              >
+                                <a
+                                  href={result.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1"
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                </a>
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
-      </div>
+      </main>
+
+      <Dialog open={isExampleDialogOpen} onOpenChange={setIsExampleDialogOpen}>
+        <DialogContent className="bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">Add Example URL</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Provide a URL to an article that demonstrates the type of results you expect from your search methodology.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Article URL</label>
+              <Input
+                placeholder="https://example.com/article"
+                value={exampleUrlInput}
+                onChange={(e) => setExampleUrlInput(e.target.value)}
+                className="border-border bg-secondary text-foreground"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault()
+                    handleAddExampleUrl()
+                  }
+                }}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsExampleDialogOpen(false)
+                setExampleUrlInput("")
+              }}
+              className="border-border text-foreground"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddExampleUrl}
+              disabled={!exampleUrlInput.trim() || isLoadingExample}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {isLoadingExample ? <Loader2 className="w-4 h-4 animate-spin" /> : "Add"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
