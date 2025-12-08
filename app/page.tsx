@@ -16,7 +16,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { Slider } from "@/components/ui/slider"
 import {
   Search,
   ExternalLink,
@@ -42,6 +41,7 @@ import {
   ArrowDown,
   BarChart3,
   HelpCircle,
+  MessageSquare,
 } from "lucide-react"
 
 // Import necessary charting components
@@ -50,6 +50,9 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Toolti
 // Import shepherd.js
 import Shepherd from "shepherd.js"
 import "shepherd.js/dist/css/shepherd.css"
+
+// Import custom range slider
+import { Slider } from "@/components/ui/slider"
 
 export const runtime = "edge"
 
@@ -95,9 +98,10 @@ interface Rule {
   id: string
   title: string
   content: string
+  description?: string // Added description field for XML conversion
 }
 
-interface ExampleUrl {
+interface SimulatedExampleResult {
   id: string
   url: string
   title: string
@@ -196,6 +200,7 @@ const PUBLIC_PRESET_CATEGORIES = ["Protest", "Conflict", "War"]
 
 const PRESETS = {
   preset1: [
+    // Renamed to environmental_safety for clarity
     {
       id: "1",
       title: "Methodology",
@@ -417,17 +422,21 @@ export default function Home() {
 
   const [selectedPreset, setSelectedPreset] = useState<keyof typeof PRESETS | null>(null)
 
-  const [timeRange, setTimeRange] = useState<[number, number]>([2002, 2019])
+  // const [timeRange, setTimeRange] = useState<[number, number]>([2002, 2019]) // Replaced by timePeriod
+  const [timePeriod, setTimePeriod] = useState<[number, number]>([2002, 2025]) // Use this state for time range
 
-  const [exampleUrls, setExampleUrls] = useState<ExampleUrl[]>([])
-  const [isExampleDialogOpen, setIsExampleDialogOpen] = useState(false)
-  const [exampleUrlInput, setExampleUrlInput] = useState("")
-  const [isLoadingExample, setIsLoadingExample] = useState(false)
+  const [simulatedQuery, setSimulatedQuery] = useState("pascua lama")
+  const [simulatedExamples, setSimulatedExamples] = useState<SimulatedExampleResult[]>([])
+  const [isSimulatedDialogOpen, setIsSimulatedDialogOpen] = useState(false)
+  const [simulatedUrlInput, setSimulatedUrlInput] = useState("")
+  const [isLoadingSimulatedExample, setIsLoadingSimulatedExample] = useState(false)
 
   const [dataParams, setDataParams] = useState<DataParam[]>(() => parseDataParams(DEFAULT_DATA_PARAMS))
   const [isDataParamsDialogOpen, setIsDataParamsDialogOpen] = useState(false)
 
   const [mode, setMode] = useState<"public" | "private">("private")
+  const [showResultsPanel, setShowResultsPanel] = useState(true) // Added state to control panel visibility
+  const [showLogsPanel, setShowLogsPanel] = useState(true) // Added state to control panel visibility
 
   const scrollToBottom = () => {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -757,31 +766,22 @@ export default function Home() {
   }
 
   const convertRulesToXML = (rules: Rule[]) => {
-    const allRules = [...rules]
-
-    if (exampleUrls.length > 0) {
-      const exampleUrlsContent = exampleUrls.map((ex) => ex.url).join(", ")
-      allRules.push({
-        id: "example_urls",
-        title: "Example URLs",
-        content: `Use these as examples for results expected from the search methodology: ${exampleUrlsContent}`,
-      })
-    }
-
-    allRules.push({
-      id: "time_period",
-      title: "Time Period",
-      content: `The time period to search in is between ${timeRange[0]} and ${timeRange[1]}.`,
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<methodology>\n'
+    rules.forEach((rule) => {
+      xml += `  <rule id="${rule.id}">\n`
+      xml += `    <description>${rule.description}</description>\n` // Use description if available, otherwise fallback to title
+      xml += `    <content>${rule.content}</content>\n`
+      xml += `  </rule>\n`
     })
 
-    return allRules
-      .map(
-        (rule) => `<rule id="${rule.id}">
-  <title>${rule.title}</title>
-  <content>${rule.content}</content>
-</rule>`,
-      )
-      .join("\n")
+    // Add time period rule
+    xml += `  <rule id="time_period">\n`
+    xml += `    <description>Global Time Period Filter</description>\n`
+    xml += `    <content>The time period to search in is between ${timePeriod[0]} and ${timePeriod[1]}.</content>\n`
+    xml += `  </rule>\n`
+
+    xml += "</methodology>"
+    return xml
   }
 
   const fetchDriveFiles = async () => {
@@ -1133,23 +1133,54 @@ export default function Home() {
     }
   }
 
-  const startResearch = async () => {
-    if (!query.trim()) return
+  // Build simulated conversation JSON
+  const buildSimulatedConversation = () => {
+    const exampleResultsJson = simulatedExamples.map((ex) => ({
+      url: ex.url,
+      title: ex.title,
+      snippet: ex.snippet,
+    }))
 
-    setLogs([])
-    setSearchResults([])
-    setIsSearching(true)
-
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
+    return {
+      history: [
+        {
+          role: "model",
+          parts: [
+            "Understood. Before proceeding, please provide the example expected results for the sample query. I will use those results not only to learn the correct final JSON output format, but also to understand the *type, nature, and relevance criteria* of the information I am expected to return, after my tool calls and search.",
+          ],
+        },
+        {
+          role: "user",
+          parts: [
+            `Here is the expected results template for ${simulatedQuery}. This is a demonstration of the final JSON output structure *and* the type of results you should target using the methodology:\n\n${JSON.stringify(exampleResultsJson, null, 2)}`,
+          ],
+        },
+        {
+          role: "model",
+          parts: [
+            "Thank you. I now fully understand:\n\n- the **format** of the final JSON output,\n- the **type of articles and sources** that match your methodology,\n- and the **breadth and diversity** of results to gather before saturation,\n\nWhen you provide a real query, I will:\n1. Call the <gdelt> tool first.\n2. Use time intervals to guide targeted searches.\n3. Perform *multiple iterative* <search> calls with refined operators.\n4. Continue until result saturation is reached.\n5. Return results consistent with the style and relevance demonstrated in your example.\n\nI am ready for your real query.",
+          ],
+        },
+      ],
     }
+  }
 
-    const abortController = new AbortController()
-    abortControllerRef.current = abortController
+  const startResearch = async (e?: React.FormEvent) => {
+    e?.preventDefault() // Prevent default form submission if called from a form event
+    if (!query.trim() || isSearching) return
+
+    setIsSearching(true)
+    setSearchResults([])
+    setLogs([])
+    setShowResultsPanel(true) // Ensure results panel is shown
+    setShowLogsPanel(true) // Ensure logs panel is shown
+    abortControllerRef.current = new AbortController()
 
     try {
       const baseUrl = BASE_URL
       const methodologyXML = convertRulesToXML(methodologyRules)
+
+      const simulatedData = buildSimulatedConversation()
 
       const response = await fetch(`${baseUrl}/stream`, {
         method: "POST",
@@ -1159,8 +1190,9 @@ export default function Home() {
         body: JSON.stringify({
           query: query.trim(),
           methodology: methodologyXML,
+          simulated: simulatedData, // Add simulated conversation data
         }),
-        signal: abortController.signal,
+        signal: abortControllerRef.current.signal,
         credentials: "include",
       })
 
@@ -1254,7 +1286,7 @@ export default function Home() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    startResearch()
+    startResearch(e) // Pass the event to startResearch
   }
 
   const handleGdeltSubmit = (e: React.FormEvent) => {
@@ -1263,17 +1295,14 @@ export default function Home() {
   }
 
   const handlePresetSelect = (presetKey: string) => {
-    setSelectedPreset(presetKey as keyof typeof PRESETS | keyof typeof PUBLIC_PRESETS)
-    const presetRules =
-      mode === "private"
-        ? PRESETS[presetKey as keyof typeof PRESETS]
-        : PUBLIC_PRESETS[presetKey as keyof typeof PUBLIC_PRESETS]
-
-    if (presetRules) {
-      setMethodologyRules(presetRules)
+    if (mode === "private") {
+      setMethodologyRules(PRESETS[presetKey as keyof typeof PRESETS])
+    } else {
+      setMethodologyRules(PUBLIC_PRESETS[presetKey as keyof typeof PUBLIC_PRESETS])
     }
-
-    setExampleUrls([])
+    setSelectedPreset(presetKey)
+    setSimulatedQuery("[pascua lama]")
+    setSimulatedExamples([])
   }
 
   const handleModeToggle = (newMode: "public" | "private") => {
@@ -1281,6 +1310,9 @@ export default function Home() {
     setSelectedPreset(null)
     // Reset methodology rules to default when switching mode
     setMethodologyRules(newMode === "private" ? DEFAULT_METHODOLOGY_RULES : PUBLIC_PRESETS["protest"]) // Default to protest for public mode
+    // Reset simulated data when switching modes
+    setSimulatedQuery("[pascua lama]")
+    setSimulatedExamples([])
   }
 
   const handleDatabaseToggle = () => {
@@ -1333,22 +1365,28 @@ export default function Home() {
   }
 
   const resetToDefault = () => {
-    setMethodologyRules(mode === "private" ? DEFAULT_METHODOLOGY_RULES : PUBLIC_PRESETS["protest"]) // Default to protest for public mode
+    if (mode === "private") {
+      setMethodologyRules(DEFAULT_METHODOLOGY_RULES) // Use default rules for private mode
+    } else {
+      setMethodologyRules(PUBLIC_PRESETS["protest"]) // Default to protest for public mode
+    }
+    setTimePeriod([2002, 2025])
     setSelectedPreset(null)
-    setExampleUrls([])
+    setSimulatedQuery("[pascua lama]")
+    setSimulatedExamples([])
   }
 
   const moveParamUp = (index: number) => {
     if (index === 0) return
     const newParams = [...dataParams]
-    ;[newParams[index - 1], newParams[index]] = [newParams[index], newParams[index - 1]]
+      ;[newParams[index - 1], newParams[index]] = [newParams[index], newParams[index - 1]]
     setDataParams(newParams)
   }
 
   const moveParamDown = (index: number) => {
     if (index === dataParams.length - 1) return
     const newParams = [...dataParams]
-    ;[newParams[index], newParams[index + 1]] = [newParams[index + 1], newParams[index]]
+      ;[newParams[index], newParams[index + 1]] = [newParams[index + 1], newParams[index]]
     setDataParams(newParams)
   }
 
@@ -1455,33 +1493,34 @@ export default function Home() {
     return actualFileName
   }
 
-  const handleAddExampleUrl = async () => {
-    if (!exampleUrlInput.trim()) return
+  const handleAddSimulatedExample = async () => {
+    if (!simulatedUrlInput.trim()) return
 
-    setIsLoadingExample(true)
+    setIsLoadingSimulatedExample(true)
     try {
-      const response = await fetch(`${baseUrl}/preview?url=${encodeURIComponent(exampleUrlInput)}`)
+      const response = await fetch(
+        `https://s25api.millerding.com/preview?url=${encodeURIComponent(simulatedUrlInput.trim())}`,
+      )
       const data = await response.json()
 
-      const newExample: ExampleUrl = {
+      const newExample: SimulatedExampleResult = {
         id: Date.now().toString(),
-        url: exampleUrlInput,
-        title: data.title || "No title",
+        url: simulatedUrlInput.trim(),
+        title: data.title || "Untitled",
         snippet: data.snippet || "No snippet available",
       }
 
-      setExampleUrls([...exampleUrls, newExample])
-      setExampleUrlInput("")
+      setSimulatedExamples([...simulatedExamples, newExample])
+      setSimulatedUrlInput("")
     } catch (error) {
       console.error("Error fetching example preview:", error)
-      alert("Failed to fetch preview for this URL")
     } finally {
-      setIsLoadingExample(false)
+      setIsLoadingSimulatedExample(false)
     }
   }
 
-  const handleRemoveExampleUrl = (id: string) => {
-    setExampleUrls(exampleUrls.filter((ex) => ex.id !== id))
+  const handleRemoveSimulatedExample = (id: string) => {
+    setSimulatedExamples(simulatedExamples.filter((ex) => ex.id !== id))
   }
 
   return (
@@ -1514,11 +1553,10 @@ export default function Home() {
                 variant="ghost"
                 size="sm"
                 onClick={() => handleModeToggle("public")}
-                className={`text-xs h-7 px-3 transition-all ${
-                  mode === "public"
+                className={`text-xs h-7 px-3 transition-all ${mode === "public"
                     ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
-                }`}
+                  }`}
               >
                 Public
               </Button>
@@ -1526,11 +1564,10 @@ export default function Home() {
                 variant="ghost"
                 size="sm"
                 onClick={() => handleModeToggle("private")}
-                className={`text-xs h-7 px-3 transition-all ${
-                  mode === "private"
+                className={`text-xs h-7 px-3 transition-all ${mode === "private"
                     ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
-                }`}
+                  }`}
               >
                 Private
               </Button>
@@ -1545,9 +1582,8 @@ export default function Home() {
             type="button"
             onClick={handleDatabaseToggle}
             variant="outline"
-            className={`h-auto py-3 px-4 flex items-center justify-between border-border hover:bg-secondary text-foreground transition-all ${
-              isDatabaseOpen ? "bg-secondary border-primary" : "bg-card"
-            }`}
+            className={`h-auto py-3 px-4 flex items-center justify-between border-border hover:bg-secondary text-foreground transition-all ${isDatabaseOpen ? "bg-secondary border-primary" : "bg-card"
+              }`}
             disabled={isSearching}
             data-tour="database-toggle"
           >
@@ -1567,9 +1603,8 @@ export default function Home() {
             type="button"
             onClick={handleDriveToggle}
             variant="outline"
-            className={`h-auto py-3 px-4 flex items-center justify-between border-border hover:bg-secondary text-foreground transition-all ${
-              isDriveOpen ? "bg-secondary border-primary" : "bg-card"
-            }`}
+            className={`h-auto py-3 px-4 flex items-center justify-between border-border hover:bg-secondary text-foreground transition-all ${isDriveOpen ? "bg-secondary border-primary" : "bg-card"
+              }`}
             disabled={isSearching}
             data-tour="drive-toggle"
           >
@@ -1589,9 +1624,8 @@ export default function Home() {
             type="button"
             onClick={handleVolumeToggle}
             variant="outline"
-            className={`h-auto py-3 px-4 flex items-center justify-between border-border hover:bg-secondary text-foreground transition-all ${
-              isVolumeOpen ? "bg-secondary border-primary" : "bg-card"
-            }`}
+            className={`h-auto py-3 px-4 flex items-center justify-between border-border hover:bg-secondary text-foreground transition-all ${isVolumeOpen ? "bg-secondary border-primary" : "bg-card"
+              }`}
             disabled={isSearching}
           >
             <div className="flex items-center gap-3">
@@ -1608,9 +1642,8 @@ export default function Home() {
         </div>
 
         <div
-          className={`overflow-hidden transition-all duration-300 ease-in-out mb-6 ${
-            isDatabaseOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
-          }`}
+          className={`overflow-hidden transition-all duration-300 ease-in-out mb-6 ${isDatabaseOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+            }`}
         >
           <Card className="border-border bg-card shadow-lg">
             <CardHeader className="pb-3 border-b border-border">
@@ -1814,9 +1847,8 @@ export default function Home() {
         </div>
 
         <div
-          className={`overflow-hidden transition-all duration-300 ease-in-out mb-6 ${
-            isDriveOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
-          }`}
+          className={`overflow-hidden transition-all duration-300 ease-in-out mb-6 ${isDriveOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+            }`}
         >
           <Card className="border-border bg-card shadow-lg">
             <CardHeader className="pb-3 border-b border-border">
@@ -1895,9 +1927,8 @@ export default function Home() {
                             {groupedFiles[folderName].map((fileName) => (
                               <div
                                 key={fileName}
-                                className={`p-4 hover:bg-secondary/50 transition-colors border-b border-border/50 last:border-b-0 ${
-                                  folderName !== "Root" ? "pl-8" : ""
-                                }`}
+                                className={`p-4 hover:bg-secondary/50 transition-colors border-b border-border/50 last:border-b-0 ${folderName !== "Root" ? "pl-8" : ""
+                                  }`}
                               >
                                 <div className="flex items-center justify-between gap-4">
                                   <div className="flex-1">
@@ -1937,9 +1968,8 @@ export default function Home() {
         </div>
 
         <div
-          className={`overflow-hidden transition-all duration-300 ease-in-out mb-6 ${
-            isVolumeOpen ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
-          }`}
+          className={`overflow-hidden transition-all duration-300 ease-in-out mb-6 ${isVolumeOpen ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
+            }`}
         >
           <Card className="border-border bg-card shadow-lg">
             <CardHeader className="pb-3 border-b border-border">
@@ -2155,11 +2185,10 @@ export default function Home() {
 
               {manualAddResult && (
                 <div
-                  className={`p-3 rounded-md text-sm ${
-                    manualAddResult.message.includes("Error")
+                  className={`p-3 rounded-md text-sm ${manualAddResult.message.includes("Error")
                       ? "bg-destructive/10 text-destructive border border-destructive/50"
                       : "bg-green-500/10 text-green-500 border border-green-500/50"
-                  }`}
+                    }`}
                 >
                   <div className="font-medium mb-1">{manualAddResult.message}</div>
                   {manualAddResult.result && (
@@ -2236,11 +2265,10 @@ export default function Home() {
 
               {pdfUploadResult && (
                 <div
-                  className={`p-3 rounded-md text-sm ${
-                    pdfUploadResult.message.includes("Error")
+                  className={`p-3 rounded-md text-sm ${pdfUploadResult.message.includes("Error")
                       ? "bg-destructive/10 text-destructive border border-destructive/50"
                       : "bg-green-500/10 text-green-500 border border-green-500/50"
-                  }`}
+                    }`}
                 >
                   <div className="font-medium mb-1">{pdfUploadResult.message}</div>
                   {pdfUploadResult.result && (
@@ -2516,9 +2544,8 @@ antamina community opposition`}
           </form>
 
           <div
-            className={`overflow-hidden transition-all duration-300 ease-in-out ${
-              isMethodologyOpen ? "max-h-[1200px] opacity-100" : "max-h-0 opacity-0"
-            }`}
+            className={`overflow-hidden transition-all duration-300 ease-in-out ${isMethodologyOpen ? "max-h-[1200px] opacity-100" : "max-h-0 opacity-0"
+              }`}
           >
             <Card className="border-border bg-card shadow-lg">
               <CardContent className="p-4">
@@ -2555,35 +2582,33 @@ antamina community opposition`}
                     </div>
                     {mode === "private"
                       ? Object.entries(PRESETS).map(([key, value], index) => (
-                          <Button
-                            key={key}
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handlePresetSelect(key)}
-                            className={`text-xs border-border hover:bg-secondary text-foreground ${
-                              selectedPreset === key ? "bg-primary/20 border-primary text-primary" : ""
+                        <Button
+                          key={key}
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePresetSelect(key)}
+                          className={`text-xs border-border hover:bg-secondary text-foreground ${selectedPreset === key ? "bg-primary/20 border-primary text-primary" : ""
                             }`}
-                            disabled={isSearching}
-                          >
-                            {PRESET_CATEGORIES[index]}
-                          </Button>
-                        ))
+                          disabled={isSearching}
+                        >
+                          {PRESET_CATEGORIES[index]}
+                        </Button>
+                      ))
                       : Object.entries(PUBLIC_PRESETS).map(([key, value], index) => (
-                          <Button
-                            key={key}
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handlePresetSelect(key)}
-                            className={`text-xs border-border hover:bg-secondary text-foreground ${
-                              selectedPreset === key ? "bg-primary/20 border-primary text-primary" : ""
+                        <Button
+                          key={key}
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePresetSelect(key)}
+                          className={`text-xs border-border hover:bg-secondary text-foreground ${selectedPreset === key ? "bg-primary/20 border-primary text-primary" : ""
                             }`}
-                            disabled={isSearching}
-                          >
-                            {PUBLIC_PRESET_CATEGORIES[index]}
-                          </Button>
-                        ))}
+                          disabled={isSearching}
+                        >
+                          {PUBLIC_PRESET_CATEGORIES[index]}
+                        </Button>
+                      ))}
                   </div>
 
                   <div className="space-y-3 max-h-96 overflow-y-auto custom-scrollbar">
@@ -2633,17 +2658,16 @@ antamina community opposition`}
                     </div>
                     <div className="space-y-4">
                       <div className="flex items-center justify-between text-sm text-foreground">
-                        <span className="font-medium">{timeRange[0]}</span>
+                        <span className="font-medium">{timePeriod[0]}</span>
                         <span className="text-xs text-muted-foreground">to</span>
-                        <span className="font-medium">{timeRange[1]}</span>
+                        <span className="font-medium">{timePeriod[1]}</span>
                       </div>
                       <Slider
-                        value={timeRange}
-                        onValueChange={(value) => setTimeRange(value as [number, number])}
+                        value={timePeriod}
+                        onValueChange={(value) => setTimePeriod(value as [number, number])}
                         min={2002}
                         max={2025}
                         step={1}
-                        minStepsBetweenThumbs={1}
                         className="w-full"
                         disabled={isSearching}
                       />
@@ -2652,17 +2676,16 @@ antamina community opposition`}
                         <span>2025</span>
                       </div>
                       <p className="text-xs text-muted-foreground italic">
-                        Search results will be limited to events between {timeRange[0]} and {timeRange[1]}.
+                        Search results will be limited to events between {timePeriod[0]} and {timePeriod[1]}.
                       </p>
                     </div>
                   </div>
 
-                  {/* Provide Example Data section */}
-                  <div className="border-2 border-accent/30 bg-accent/5 rounded-md p-4 space-y-3">
+                  <div className="border-2 border-accent/30 bg-accent/5 rounded-md p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-accent" />
-                        <span className="text-sm font-medium text-foreground">Example Data</span>
+                        <MessageSquare className="w-4 h-4 text-accent" />
+                        <span className="text-sm font-medium text-foreground">Simulated Data</span>
                         <Badge variant="secondary" className="bg-accent/20 text-accent text-xs border-0">
                           Optional
                         </Badge>
@@ -2671,46 +2694,17 @@ antamina community opposition`}
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => setIsExampleDialogOpen(true)}
-                        className="text-xs border-border hover:bg-secondary text-foreground h-auto px-2 py-1 bg-transparent"
+                        onClick={() => setIsSimulatedDialogOpen(true)}
+                        className="text-xs border-border hover:bg-secondary text-foreground h-auto px-3 py-1.5 bg-transparent"
                       >
-                        <Plus className="w-3 h-3 mr-1" />
-                        Add Example URL
+                        <Settings className="w-3 h-3 mr-1" />
+                        Configure Simulation
                       </Button>
                     </div>
-
-                    {exampleUrls.length > 0 ? (
-                      <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
-                        {exampleUrls.map((example) => (
-                          <div
-                            key={example.id}
-                            className="border border-border bg-secondary/50 rounded-md p-3 space-y-1"
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-foreground truncate">{example.title}</p>
-                                <p className="text-xs text-muted-foreground truncate">{example.url}</p>
-                                <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{example.snippet}</p>
-                              </div>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleRemoveExampleUrl(example.id)}
-                                className="h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
-                              >
-                                <X className="w-3 h-3" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-muted-foreground italic">
-                        No example URLs added. Click "Add Example URL" to provide reference articles that demonstrate
-                        the expected results.
-                      </p>
-                    )}
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Configure example conversation data to guide the AI model with expected result formats and
+                      relevance criteria.
+                    </p>
                   </div>
 
                   <div className="flex justify-end">
@@ -2730,7 +2724,7 @@ antamina community opposition`}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div>
+            <div className={`${showLogsPanel ? "block" : "hidden"}`}>
               <div className="flex items-center gap-2 mb-4">
                 <Circle
                   className={`w-2 h-2 ${isSearching ? "fill-primary text-primary animate-pulse" : "fill-muted-foreground text-muted-foreground"}`}
@@ -2767,7 +2761,7 @@ antamina community opposition`}
               </Card>
             </div>
 
-            <div>
+            <div className={`${showResultsPanel ? "block" : "hidden"}`}>
               <div className="flex items-center gap-2 mb-4">
                 <h2 className="text-base font-semibold text-foreground">Search Results</h2>
                 {searchResults.length > 0 && (
@@ -2838,49 +2832,170 @@ antamina community opposition`}
           </div>
         </div>
       </main>
-
-      <Dialog open={isExampleDialogOpen} onOpenChange={setIsExampleDialogOpen}>
-        <DialogContent className="bg-card border-border">
+      <Dialog open={isSimulatedDialogOpen} onOpenChange={setIsSimulatedDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col bg-card border-border">
           <DialogHeader>
-            <DialogTitle className="text-foreground">Add Example URL</DialogTitle>
+            <DialogTitle className="text-foreground">Configure Simulated Interaction Chain</DialogTitle>
             <DialogDescription className="text-muted-foreground">
-              Provide a URL to an article that demonstrates the type of results you expect from your search methodology.
+              Set up the AI conversation flow with system prompts, example query, and expected results.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+
+          <div className="flex-1 overflow-y-auto custom-scrollbar space-y-6 pr-2">
+            {/* System Prompt - Model's first message */}
+
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Article URL</label>
-              <Input
-                placeholder="https://example.com/article"
-                value={exampleUrlInput}
-                onChange={(e) => setExampleUrlInput(e.target.value)}
-                className="border-border bg-secondary text-foreground"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault()
-                    handleAddExampleUrl()
-                  }
-                }}
-              />
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-orange-500" />
+                <span className="text-sm font-semibold text-orange-500">System Prompts with Methodology</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-blue-500" />
+                <span className="text-sm font-semibold text-blue-500">Model Acknowledgement to System Prompts</span>
+              </div>
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-md p-4">
+                <p className="text-sm text-foreground/90 leading-relaxed">
+                  Understood. Before proceeding, please provide the example expected results for the sample query. I
+                  will use those results not only to learn the correct final JSON output format, but also to understand
+                  the *type, nature, and relevance criteria* of the information I am expected to return, after my tool
+                  calls and search.
+                </p>
+              </div>
+            </div>
+
+            {/* User Message - Editable query and examples */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-green-500" />
+                <span className="text-sm font-semibold text-green-500">User</span>
+              </div>
+              <div className="bg-green-500/10 border border-green-500/20 rounded-md p-4 space-y-4">
+                <div>
+                  <p className="text-sm text-foreground/90 mb-3">
+                    Here is the expected results template for{" "}
+                    <Input
+                      value={simulatedQuery}
+                      onChange={(e) => setSimulatedQuery(e.target.value)}
+                      className="inline-flex w-auto min-w-[120px] h-7 px-2 text-sm bg-background border-green-500/40"
+                      placeholder="Enter query..."
+                    />
+                    . This is a demonstration of the final JSON output structure *and* the type of results you should
+                    target using the methodology:
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-foreground">Example Results</label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={simulatedUrlInput}
+                        onChange={(e) => setSimulatedUrlInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault()
+                            handleAddSimulatedExample()
+                          }
+                        }}
+                        placeholder="Enter URL to fetch preview..."
+                        className="h-8 text-xs bg-background border-border w-64"
+                        disabled={isLoadingSimulatedExample}
+                      />
+                      <Button
+                        type="button"
+                        onClick={handleAddSimulatedExample}
+                        disabled={!simulatedUrlInput.trim() || isLoadingSimulatedExample}
+                        size="sm"
+                        className="h-8 px-3 text-xs"
+                      >
+                        {isLoadingSimulatedExample ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <>
+                            <Plus className="w-3 h-3 mr-1" />
+                            Add
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {simulatedExamples.length > 0 ? (
+                    <div className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar bg-background/50 rounded-md p-3">
+                      {simulatedExamples.map((example, index) => (
+                        <div key={example.id} className="border border-border bg-card rounded-md p-3 space-y-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs font-mono text-muted-foreground">#{index + 1}</span>
+                                <p className="text-sm font-medium text-foreground truncate">{example.title}</p>
+                              </div>
+                              <p className="text-xs text-muted-foreground truncate mb-1">{example.url}</p>
+                              <p className="text-xs text-muted-foreground line-clamp-2">{example.snippet}</p>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveSimulatedExample(example.id)}
+                              className="h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
+                            >
+                              <X className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="bg-background/50 rounded-md p-6 text-center">
+                      <FileText className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-xs text-muted-foreground italic">
+                        No example results added yet. Add URLs to fetch article previews.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Model Response */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-blue-500" />
+                <span className="text-sm font-semibold text-blue-500">Model</span>
+              </div>
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-md p-4">
+                <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-line">
+                  {`Thank you. I now fully understand:
+
+- the **format** of the final JSON output,
+- the **type of articles and sources** that match your methodology,
+- and the **breadth and diversity** of results to gather before saturation,
+
+When you provide a real query, I will:
+1. Call the <gdelt> tool first.
+2. Use time intervals to guide targeted searches.
+3. Perform *multiple iterative* <search> calls with refined operators.
+4. Continue until result saturation is reached.
+5. Return results consistent with the style and relevance demonstrated in your example.
+
+I am ready for your real query.`}
+                </p>
+              </div>
             </div>
           </div>
+
           <DialogFooter>
             <Button
+              type="button"
               variant="outline"
-              onClick={() => {
-                setIsExampleDialogOpen(false)
-                setExampleUrlInput("")
-              }}
-              className="border-border text-foreground"
+              onClick={() => setIsSimulatedDialogOpen(false)}
+              className="border-border"
             >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleAddExampleUrl}
-              disabled={!exampleUrlInput.trim() || isLoadingExample}
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              {isLoadingExample ? <Loader2 className="w-4 h-4 animate-spin" /> : "Add"}
+              Done
             </Button>
           </DialogFooter>
         </DialogContent>
