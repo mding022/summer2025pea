@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -422,12 +423,14 @@ export default function Home() {
 
   const [selectedPreset, setSelectedPreset] = useState<keyof typeof PRESETS | null>(null)
 
-  // const [timeRange, setTimeRange] = useState<[number, number]>([2002, 2019]) // Replaced by timePeriod
+  const [useGdelt, setUseGdelt] = useState(false)
+
+  const [isSimulatedDataDialogOpen, setIsSimulatedDataDialogOpen] = useState(false)
+
   const [timePeriod, setTimePeriod] = useState<[number, number]>([2002, 2025]) // Use this state for time range
 
   const [simulatedQuery, setSimulatedQuery] = useState("pascua lama")
   const [simulatedExamples, setSimulatedExamples] = useState<SimulatedExampleResult[]>([])
-  const [isSimulatedDialogOpen, setIsSimulatedDialogOpen] = useState(false)
   const [simulatedUrlInput, setSimulatedUrlInput] = useState("")
   const [isLoadingSimulatedExample, setIsLoadingSimulatedExample] = useState(false)
 
@@ -765,7 +768,7 @@ export default function Home() {
     return null
   }
 
-  const convertRulesToXML = (rules: Rule[]) => {
+  const convertRulesToXML = (rules: Rule[], timePeriod: [number, number]) => {
     let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<methodology>\n'
     rules.forEach((rule) => {
       xml += `  <rule id="${rule.id}">\n`
@@ -1102,7 +1105,7 @@ export default function Home() {
     setIsBatchProcessing(true)
     try {
       const baseUrl = BASE_URL
-      const methodologyXML = convertRulesToXML(methodologyRules)
+      const methodologyXML = convertRulesToXML(methodologyRules, timePeriod)
 
       const response = await fetch(`${baseUrl}/batch`, {
         method: "POST",
@@ -1134,7 +1137,7 @@ export default function Home() {
   }
 
   // Build simulated conversation JSON
-  const buildSimulatedConversation = () => {
+  const convertSimulatedToJson = () => {
     const exampleResultsJson = simulatedExamples.map((ex) => ({
       url: ex.url,
       title: ex.title,
@@ -1165,24 +1168,22 @@ export default function Home() {
     }
   }
 
-  const startResearch = async (e?: React.FormEvent) => {
-    e?.preventDefault() // Prevent default form submission if called from a form event
-    if (!query.trim() || isSearching) return
+  const handleSearch = async () => {
+    if (!query.trim()) return
 
     setIsSearching(true)
-    setSearchResults([])
     setLogs([])
+    setSearchResults([])
     setShowResultsPanel(true) // Ensure results panel is shown
     setShowLogsPanel(true) // Ensure logs panel is shown
     abortControllerRef.current = new AbortController()
 
     try {
-      const baseUrl = BASE_URL
-      const methodologyXML = convertRulesToXML(methodologyRules)
+      const methodologyXML = convertRulesToXML(methodologyRules, timePeriod)
+      const simulatedData = convertSimulatedToJson()
 
-      const simulatedData = buildSimulatedConversation()
-
-      const response = await fetch(`${baseUrl}/stream`, {
+      const gdeltParam = useGdelt ? "yes" : "no"
+      const response = await fetch(`${BASE_URL}/stream?gdelt=${gdeltParam}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1286,7 +1287,7 @@ export default function Home() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    startResearch(e) // Pass the event to startResearch
+    handleSearch() // Call the renamed handleSearch function
   }
 
   const handleGdeltSubmit = (e: React.FormEvent) => {
@@ -1374,19 +1375,20 @@ export default function Home() {
     setSelectedPreset(null)
     setSimulatedQuery("[pascua lama]")
     setSimulatedExamples([])
+    setUseGdelt(false) // Reset GDELT toggle
   }
 
   const moveParamUp = (index: number) => {
     if (index === 0) return
     const newParams = [...dataParams]
-      ;[newParams[index - 1], newParams[index]] = [newParams[index], newParams[index - 1]]
+    ;[newParams[index - 1], newParams[index]] = [newParams[index], newParams[index - 1]]
     setDataParams(newParams)
   }
 
   const moveParamDown = (index: number) => {
     if (index === dataParams.length - 1) return
     const newParams = [...dataParams]
-      ;[newParams[index], newParams[index + 1]] = [newParams[index + 1], newParams[index]]
+    ;[newParams[index], newParams[index + 1]] = [newParams[index + 1], newParams[index]]
     setDataParams(newParams)
   }
 
@@ -1553,10 +1555,11 @@ export default function Home() {
                 variant="ghost"
                 size="sm"
                 onClick={() => handleModeToggle("public")}
-                className={`text-xs h-7 px-3 transition-all ${mode === "public"
+                className={`text-xs h-7 px-3 transition-all ${
+                  mode === "public"
                     ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
-                  }`}
+                }`}
               >
                 Public
               </Button>
@@ -1564,10 +1567,11 @@ export default function Home() {
                 variant="ghost"
                 size="sm"
                 onClick={() => handleModeToggle("private")}
-                className={`text-xs h-7 px-3 transition-all ${mode === "private"
+                className={`text-xs h-7 px-3 transition-all ${
+                  mode === "private"
                     ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
-                  }`}
+                }`}
               >
                 Private
               </Button>
@@ -1582,8 +1586,9 @@ export default function Home() {
             type="button"
             onClick={handleDatabaseToggle}
             variant="outline"
-            className={`h-auto py-3 px-4 flex items-center justify-between border-border hover:bg-secondary text-foreground transition-all ${isDatabaseOpen ? "bg-secondary border-primary" : "bg-card"
-              }`}
+            className={`h-auto py-3 px-4 flex items-center justify-between border-border hover:bg-secondary text-foreground transition-all ${
+              isDatabaseOpen ? "bg-secondary border-primary" : "bg-card"
+            }`}
             disabled={isSearching}
             data-tour="database-toggle"
           >
@@ -1603,8 +1608,9 @@ export default function Home() {
             type="button"
             onClick={handleDriveToggle}
             variant="outline"
-            className={`h-auto py-3 px-4 flex items-center justify-between border-border hover:bg-secondary text-foreground transition-all ${isDriveOpen ? "bg-secondary border-primary" : "bg-card"
-              }`}
+            className={`h-auto py-3 px-4 flex items-center justify-between border-border hover:bg-secondary text-foreground transition-all ${
+              isDriveOpen ? "bg-secondary border-primary" : "bg-card"
+            }`}
             disabled={isSearching}
             data-tour="drive-toggle"
           >
@@ -1624,8 +1630,9 @@ export default function Home() {
             type="button"
             onClick={handleVolumeToggle}
             variant="outline"
-            className={`h-auto py-3 px-4 flex items-center justify-between border-border hover:bg-secondary text-foreground transition-all ${isVolumeOpen ? "bg-secondary border-primary" : "bg-card"
-              }`}
+            className={`h-auto py-3 px-4 flex items-center justify-between border-border hover:bg-secondary text-foreground transition-all ${
+              isVolumeOpen ? "bg-secondary border-primary" : "bg-card"
+            }`}
             disabled={isSearching}
           >
             <div className="flex items-center gap-3">
@@ -1642,8 +1649,9 @@ export default function Home() {
         </div>
 
         <div
-          className={`overflow-hidden transition-all duration-300 ease-in-out mb-6 ${isDatabaseOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
-            }`}
+          className={`overflow-hidden transition-all duration-300 ease-in-out mb-6 ${
+            isDatabaseOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+          }`}
         >
           <Card className="border-border bg-card shadow-lg">
             <CardHeader className="pb-3 border-b border-border">
@@ -1847,8 +1855,9 @@ export default function Home() {
         </div>
 
         <div
-          className={`overflow-hidden transition-all duration-300 ease-in-out mb-6 ${isDriveOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
-            }`}
+          className={`overflow-hidden transition-all duration-300 ease-in-out mb-6 ${
+            isDriveOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+          }`}
         >
           <Card className="border-border bg-card shadow-lg">
             <CardHeader className="pb-3 border-b border-border">
@@ -1927,8 +1936,9 @@ export default function Home() {
                             {groupedFiles[folderName].map((fileName) => (
                               <div
                                 key={fileName}
-                                className={`p-4 hover:bg-secondary/50 transition-colors border-b border-border/50 last:border-b-0 ${folderName !== "Root" ? "pl-8" : ""
-                                  }`}
+                                className={`p-4 hover:bg-secondary/50 transition-colors border-b border-border/50 last:border-b-0 ${
+                                  folderName !== "Root" ? "pl-8" : ""
+                                }`}
                               >
                                 <div className="flex items-center justify-between gap-4">
                                   <div className="flex-1">
@@ -1968,8 +1978,9 @@ export default function Home() {
         </div>
 
         <div
-          className={`overflow-hidden transition-all duration-300 ease-in-out mb-6 ${isVolumeOpen ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
-            }`}
+          className={`overflow-hidden transition-all duration-300 ease-in-out mb-6 ${
+            isVolumeOpen ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
+          }`}
         >
           <Card className="border-border bg-card shadow-lg">
             <CardHeader className="pb-3 border-b border-border">
@@ -2185,10 +2196,11 @@ export default function Home() {
 
               {manualAddResult && (
                 <div
-                  className={`p-3 rounded-md text-sm ${manualAddResult.message.includes("Error")
+                  className={`p-3 rounded-md text-sm ${
+                    manualAddResult.message.includes("Error")
                       ? "bg-destructive/10 text-destructive border border-destructive/50"
                       : "bg-green-500/10 text-green-500 border border-green-500/50"
-                    }`}
+                  }`}
                 >
                   <div className="font-medium mb-1">{manualAddResult.message}</div>
                   {manualAddResult.result && (
@@ -2265,10 +2277,11 @@ export default function Home() {
 
               {pdfUploadResult && (
                 <div
-                  className={`p-3 rounded-md text-sm ${pdfUploadResult.message.includes("Error")
+                  className={`p-3 rounded-md text-sm ${
+                    pdfUploadResult.message.includes("Error")
                       ? "bg-destructive/10 text-destructive border border-destructive/50"
                       : "bg-green-500/10 text-green-500 border border-green-500/50"
-                    }`}
+                  }`}
                 >
                   <div className="font-medium mb-1">{pdfUploadResult.message}</div>
                   {pdfUploadResult.result && (
@@ -2544,15 +2557,30 @@ antamina community opposition`}
           </form>
 
           <div
-            className={`overflow-hidden transition-all duration-300 ease-in-out ${isMethodologyOpen ? "max-h-[1200px] opacity-100" : "max-h-0 opacity-0"
-              }`}
+            className={`overflow-hidden transition-all duration-300 ease-in-out ${
+              isMethodologyOpen ? "max-h-[1200px] opacity-100" : "max-h-0 opacity-0"
+            }`}
           >
             <Card className="border-border bg-card shadow-lg">
               <CardContent className="p-4">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <label className="text-sm font-medium text-foreground">Research Methodology Rules</label>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 items-center">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="use-gdelt"
+                          checked={useGdelt}
+                          onCheckedChange={(checked) => setUseGdelt(checked === true)}
+                          className="border-border data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
+                        />
+                        <label
+                          htmlFor="use-gdelt"
+                          className="text-xs text-muted-foreground cursor-pointer hover:text-foreground"
+                        >
+                          Use GDELT?
+                        </label>
+                      </div>
                       <Button
                         type="button"
                         variant="ghost"
@@ -2582,33 +2610,35 @@ antamina community opposition`}
                     </div>
                     {mode === "private"
                       ? Object.entries(PRESETS).map(([key, value], index) => (
-                        <Button
-                          key={key}
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handlePresetSelect(key)}
-                          className={`text-xs border-border hover:bg-secondary text-foreground ${selectedPreset === key ? "bg-primary/20 border-primary text-primary" : ""
+                          <Button
+                            key={key}
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePresetSelect(key)}
+                            className={`text-xs border-border hover:bg-secondary text-foreground ${
+                              selectedPreset === key ? "bg-primary/20 border-primary text-primary" : ""
                             }`}
-                          disabled={isSearching}
-                        >
-                          {PRESET_CATEGORIES[index]}
-                        </Button>
-                      ))
+                            disabled={isSearching}
+                          >
+                            {PRESET_CATEGORIES[index]}
+                          </Button>
+                        ))
                       : Object.entries(PUBLIC_PRESETS).map(([key, value], index) => (
-                        <Button
-                          key={key}
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handlePresetSelect(key)}
-                          className={`text-xs border-border hover:bg-secondary text-foreground ${selectedPreset === key ? "bg-primary/20 border-primary text-primary" : ""
+                          <Button
+                            key={key}
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePresetSelect(key)}
+                            className={`text-xs border-border hover:bg-secondary text-foreground ${
+                              selectedPreset === key ? "bg-primary/20 border-primary text-primary" : ""
                             }`}
-                          disabled={isSearching}
-                        >
-                          {PUBLIC_PRESET_CATEGORIES[index]}
-                        </Button>
-                      ))}
+                            disabled={isSearching}
+                          >
+                            {PUBLIC_PRESET_CATEGORIES[index]}
+                          </Button>
+                        ))}
                   </div>
 
                   <div className="space-y-3 max-h-96 overflow-y-auto custom-scrollbar">
@@ -2694,7 +2724,7 @@ antamina community opposition`}
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => setIsSimulatedDialogOpen(true)}
+                        onClick={() => setIsSimulatedDataDialogOpen(true)}
                         className="text-xs border-border hover:bg-secondary text-foreground h-auto px-3 py-1.5 bg-transparent"
                       >
                         <Settings className="w-3 h-3 mr-1" />
@@ -2832,7 +2862,7 @@ antamina community opposition`}
           </div>
         </div>
       </main>
-      <Dialog open={isSimulatedDialogOpen} onOpenChange={setIsSimulatedDialogOpen}>
+      <Dialog open={isSimulatedDataDialogOpen} onOpenChange={setIsSimulatedDataDialogOpen}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col bg-card border-border">
           <DialogHeader>
             <DialogTitle className="text-foreground">Configure Simulated Interaction Chain</DialogTitle>
@@ -2992,7 +3022,7 @@ I am ready for your real query.`}
             <Button
               type="button"
               variant="outline"
-              onClick={() => setIsSimulatedDialogOpen(false)}
+              onClick={() => setIsSimulatedDataDialogOpen(false)}
               className="border-border"
             >
               Done
