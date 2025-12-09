@@ -20,7 +20,7 @@ export default function RootLayout({
       <html lang="en">
         <body className={inter.className}>
           {/* HEADER */}
-          <header className="w-full bg-white border-b">
+          <header className="w-full bg-none border-b">
             <div className="mx-auto p-4 flex justify-end items-center">
               {/* Left side — your site title */}
 

@@ -43,6 +43,8 @@ import {
   BarChart3,
   HelpCircle,
   MessageSquare,
+  Sun,
+  Moon,
 } from "lucide-react"
 
 // Import necessary charting components
@@ -368,6 +370,8 @@ const COUNTRIES = [
 const KEYWORD_TYPES = ["mining", "demand", "response"]
 
 export default function Home() {
+  const [theme, setTheme] = useState<"light" | "dark">("dark")
+
   const [query, setQuery] = useState("")
   const [baseUrl, setBaseUrl] = useState("https://s25api.millerding.com")
   const [methodologyRules, setMethodologyRules] = useState<Rule[]>(DEFAULT_METHODOLOGY_RULES)
@@ -520,6 +524,10 @@ export default function Home() {
     return () => {
       document.head.removeChild(style)
     }
+  }, [])
+
+  useEffect(() => {
+    document.documentElement.classList.add("dark")
   }, [])
 
   const startTour = () => {
@@ -1302,7 +1310,7 @@ export default function Home() {
       setMethodologyRules(PUBLIC_PRESETS[presetKey as keyof typeof PUBLIC_PRESETS])
     }
     setSelectedPreset(presetKey)
-    setSimulatedQuery("[pascua lama]")
+    setSimulatedQuery("pascua lama")
     setSimulatedExamples([])
   }
 
@@ -1312,8 +1320,14 @@ export default function Home() {
     // Reset methodology rules to default when switching mode
     setMethodologyRules(newMode === "private" ? DEFAULT_METHODOLOGY_RULES : PUBLIC_PRESETS["protest"]) // Default to protest for public mode
     // Reset simulated data when switching modes
-    setSimulatedQuery("[pascua lama]")
+    setSimulatedQuery("pascua lama")
     setSimulatedExamples([])
+  }
+
+  const toggleTheme = () => {
+    const newTheme = theme === "light" ? "dark" : "light"
+    setTheme(newTheme)
+    document.documentElement.classList.toggle("dark", newTheme === "dark")
   }
 
   const handleDatabaseToggle = () => {
@@ -1373,7 +1387,7 @@ export default function Home() {
     }
     setTimePeriod([2002, 2025])
     setSelectedPreset(null)
-    setSimulatedQuery("[pascua lama]")
+    setSimulatedQuery("pascua lama")
     setSimulatedExamples([])
     setUseGdelt(false) // Reset GDELT toggle
   }
@@ -1381,14 +1395,14 @@ export default function Home() {
   const moveParamUp = (index: number) => {
     if (index === 0) return
     const newParams = [...dataParams]
-    ;[newParams[index - 1], newParams[index]] = [newParams[index], newParams[index - 1]]
+      ;[newParams[index - 1], newParams[index]] = [newParams[index], newParams[index - 1]]
     setDataParams(newParams)
   }
 
   const moveParamDown = (index: number) => {
     if (index === dataParams.length - 1) return
     const newParams = [...dataParams]
-    ;[newParams[index], newParams[index + 1]] = [newParams[index + 1], newParams[index]]
+      ;[newParams[index], newParams[index + 1]] = [newParams[index + 1], newParams[index]]
     setDataParams(newParams)
   }
 
@@ -1526,7 +1540,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
+    <div className="flex flex-col min-h-screen bg-background text-foreground">
       <div className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
@@ -1536,45 +1550,53 @@ export default function Home() {
                   <Search className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <h1 className="text-lg font-semibold text-foreground">PEIDIR Research</h1>
-                  <p className="text-xs text-muted-foreground">Agential Research & Data Analysis Platform</p>
+                  <h1 className="text-lg font-semibold text-foreground">PEIDIR Research Platform</h1>
+                  <p className="text-xs text-muted-foreground">Agential Research & Data Analysis and Extraction</p>
                 </div>
               </div>
               <Button
                 onClick={startTour}
                 variant="outline"
                 size="sm"
-                className="border-border hover:bg-secondary text-muted-foreground hover:text-foreground bg-transparent"
+                className="border-border hover:bg-secondary text-muted-foreground hover:text-foreground bg-transparent ml-4"
               >
                 <HelpCircle className="w-4 h-4 mr-2" />
                 Tour
               </Button>
             </div>
-            <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-1">
+            <div className="flex items-center gap-3">
               <Button
-                variant="ghost"
+                onClick={toggleTheme}
+                variant="outline"
                 size="sm"
-                onClick={() => handleModeToggle("public")}
-                className={`text-xs h-7 px-3 transition-all ${
-                  mode === "public"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                className="border-border hover:bg-secondary text-muted-foreground hover:text-foreground bg-transparent"
               >
-                Public
+                {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleModeToggle("private")}
-                className={`text-xs h-7 px-3 transition-all ${
-                  mode === "private"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Private
-              </Button>
+              <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleModeToggle("public")}
+                  className={`text-xs h-7 px-3 transition-all ${mode === "public"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                    }`}
+                >
+                  Public
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleModeToggle("private")}
+                  className={`text-xs h-7 px-3 transition-all ${mode === "private"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                    }`}
+                >
+                  Private
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -1586,9 +1608,8 @@ export default function Home() {
             type="button"
             onClick={handleDatabaseToggle}
             variant="outline"
-            className={`h-auto py-3 px-4 flex items-center justify-between border-border hover:bg-secondary text-foreground transition-all ${
-              isDatabaseOpen ? "bg-secondary border-primary" : "bg-card"
-            }`}
+            className={`h-auto py-3 px-4 flex items-center justify-between border-border hover:bg-secondary text-foreground transition-all ${isDatabaseOpen ? "bg-secondary border-primary" : "bg-card"
+              }`}
             disabled={isSearching}
             data-tour="database-toggle"
           >
@@ -1608,9 +1629,8 @@ export default function Home() {
             type="button"
             onClick={handleDriveToggle}
             variant="outline"
-            className={`h-auto py-3 px-4 flex items-center justify-between border-border hover:bg-secondary text-foreground transition-all ${
-              isDriveOpen ? "bg-secondary border-primary" : "bg-card"
-            }`}
+            className={`h-auto py-3 px-4 flex items-center justify-between border-border hover:bg-secondary text-foreground transition-all ${isDriveOpen ? "bg-secondary border-primary" : "bg-card"
+              }`}
             disabled={isSearching}
             data-tour="drive-toggle"
           >
@@ -1630,9 +1650,8 @@ export default function Home() {
             type="button"
             onClick={handleVolumeToggle}
             variant="outline"
-            className={`h-auto py-3 px-4 flex items-center justify-between border-border hover:bg-secondary text-foreground transition-all ${
-              isVolumeOpen ? "bg-secondary border-primary" : "bg-card"
-            }`}
+            className={`h-auto py-3 px-4 flex items-center justify-between border-border hover:bg-secondary text-foreground transition-all ${isVolumeOpen ? "bg-secondary border-primary" : "bg-card"
+              }`}
             disabled={isSearching}
           >
             <div className="flex items-center gap-3">
@@ -1649,9 +1668,8 @@ export default function Home() {
         </div>
 
         <div
-          className={`overflow-hidden transition-all duration-300 ease-in-out mb-6 ${
-            isDatabaseOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
-          }`}
+          className={`overflow-hidden transition-all duration-300 ease-in-out mb-6 ${isDatabaseOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+            }`}
         >
           <Card className="border-border bg-card shadow-lg">
             <CardHeader className="pb-3 border-b border-border">
@@ -1855,9 +1873,8 @@ export default function Home() {
         </div>
 
         <div
-          className={`overflow-hidden transition-all duration-300 ease-in-out mb-6 ${
-            isDriveOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
-          }`}
+          className={`overflow-hidden transition-all duration-300 ease-in-out mb-6 ${isDriveOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+            }`}
         >
           <Card className="border-border bg-card shadow-lg">
             <CardHeader className="pb-3 border-b border-border">
@@ -1936,9 +1953,8 @@ export default function Home() {
                             {groupedFiles[folderName].map((fileName) => (
                               <div
                                 key={fileName}
-                                className={`p-4 hover:bg-secondary/50 transition-colors border-b border-border/50 last:border-b-0 ${
-                                  folderName !== "Root" ? "pl-8" : ""
-                                }`}
+                                className={`p-4 hover:bg-secondary/50 transition-colors border-b border-border/50 last:border-b-0 ${folderName !== "Root" ? "pl-8" : ""
+                                  }`}
                               >
                                 <div className="flex items-center justify-between gap-4">
                                   <div className="flex-1">
@@ -1978,9 +1994,8 @@ export default function Home() {
         </div>
 
         <div
-          className={`overflow-hidden transition-all duration-300 ease-in-out mb-6 ${
-            isVolumeOpen ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
-          }`}
+          className={`overflow-hidden transition-all duration-300 ease-in-out mb-6 ${isVolumeOpen ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
+            }`}
         >
           <Card className="border-border bg-card shadow-lg">
             <CardHeader className="pb-3 border-b border-border">
@@ -2196,11 +2211,10 @@ export default function Home() {
 
               {manualAddResult && (
                 <div
-                  className={`p-3 rounded-md text-sm ${
-                    manualAddResult.message.includes("Error")
+                  className={`p-3 rounded-md text-sm ${manualAddResult.message.includes("Error")
                       ? "bg-destructive/10 text-destructive border border-destructive/50"
                       : "bg-green-500/10 text-green-500 border border-green-500/50"
-                  }`}
+                    }`}
                 >
                   <div className="font-medium mb-1">{manualAddResult.message}</div>
                   {manualAddResult.result && (
@@ -2277,11 +2291,10 @@ export default function Home() {
 
               {pdfUploadResult && (
                 <div
-                  className={`p-3 rounded-md text-sm ${
-                    pdfUploadResult.message.includes("Error")
+                  className={`p-3 rounded-md text-sm ${pdfUploadResult.message.includes("Error")
                       ? "bg-destructive/10 text-destructive border border-destructive/50"
                       : "bg-green-500/10 text-green-500 border border-green-500/50"
-                  }`}
+                    }`}
                 >
                   <div className="font-medium mb-1">{pdfUploadResult.message}</div>
                   {pdfUploadResult.result && (
@@ -2557,9 +2570,8 @@ antamina community opposition`}
           </form>
 
           <div
-            className={`overflow-hidden transition-all duration-300 ease-in-out ${
-              isMethodologyOpen ? "max-h-[1200px] opacity-100" : "max-h-0 opacity-0"
-            }`}
+            className={`overflow-hidden transition-all duration-300 ease-in-out ${isMethodologyOpen ? "max-h-[1200px] opacity-100" : "max-h-0 opacity-0"
+              }`}
           >
             <Card className="border-border bg-card shadow-lg">
               <CardContent className="p-4">
@@ -2610,35 +2622,33 @@ antamina community opposition`}
                     </div>
                     {mode === "private"
                       ? Object.entries(PRESETS).map(([key, value], index) => (
-                          <Button
-                            key={key}
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handlePresetSelect(key)}
-                            className={`text-xs border-border hover:bg-secondary text-foreground ${
-                              selectedPreset === key ? "bg-primary/20 border-primary text-primary" : ""
+                        <Button
+                          key={key}
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePresetSelect(key)}
+                          className={`text-xs border-border hover:bg-secondary text-foreground ${selectedPreset === key ? "bg-primary/20 border-primary text-primary" : ""
                             }`}
-                            disabled={isSearching}
-                          >
-                            {PRESET_CATEGORIES[index]}
-                          </Button>
-                        ))
+                          disabled={isSearching}
+                        >
+                          {PRESET_CATEGORIES[index]}
+                        </Button>
+                      ))
                       : Object.entries(PUBLIC_PRESETS).map(([key, value], index) => (
-                          <Button
-                            key={key}
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handlePresetSelect(key)}
-                            className={`text-xs border-border hover:bg-secondary text-foreground ${
-                              selectedPreset === key ? "bg-primary/20 border-primary text-primary" : ""
+                        <Button
+                          key={key}
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePresetSelect(key)}
+                          className={`text-xs border-border hover:bg-secondary text-foreground ${selectedPreset === key ? "bg-primary/20 border-primary text-primary" : ""
                             }`}
-                            disabled={isSearching}
-                          >
-                            {PUBLIC_PRESET_CATEGORIES[index]}
-                          </Button>
-                        ))}
+                          disabled={isSearching}
+                        >
+                          {PUBLIC_PRESET_CATEGORIES[index]}
+                        </Button>
+                      ))}
                   </div>
 
                   <div className="space-y-3 max-h-96 overflow-y-auto custom-scrollbar">
@@ -2678,6 +2688,32 @@ antamina community opposition`}
                     ))}
                   </div>
 
+                  <div className="border-2 border-accent/30 bg-accent/5 rounded-md p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <MessageSquare className="w-4 h-4 text-accent" />
+                        <span className="text-sm font-medium text-foreground">Simulated Data</span>
+                        <Badge variant="secondary" className="bg-accent/20 text-accent text-xs border-0">
+                          Optional
+                        </Badge>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsSimulatedDataDialogOpen(true)}
+                        className="text-xs border-border hover:bg-secondary text-foreground h-auto px-6 py-2 bg-transparent"
+                      >
+                        <Settings className="w-3 h-3 mr-1" />
+                        Configure Simulation
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Configure example conversation data to guide the AI model with expected result formats and
+                      relevance criteria.
+                    </p>
+                  </div>
+
                   <div className="border-2 border-primary/30 bg-primary/5 rounded-md p-4 space-y-3">
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-primary" />
@@ -2709,32 +2745,6 @@ antamina community opposition`}
                         Search results will be limited to events between {timePeriod[0]} and {timePeriod[1]}.
                       </p>
                     </div>
-                  </div>
-
-                  <div className="border-2 border-accent/30 bg-accent/5 rounded-md p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <MessageSquare className="w-4 h-4 text-accent" />
-                        <span className="text-sm font-medium text-foreground">Simulated Data</span>
-                        <Badge variant="secondary" className="bg-accent/20 text-accent text-xs border-0">
-                          Optional
-                        </Badge>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setIsSimulatedDataDialogOpen(true)}
-                        className="text-xs border-border hover:bg-secondary text-foreground h-auto px-3 py-1.5 bg-transparent"
-                      >
-                        <Settings className="w-3 h-3 mr-1" />
-                        Configure Simulation
-                      </Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Configure example conversation data to guide the AI model with expected result formats and
-                      relevance criteria.
-                    </p>
                   </div>
 
                   <div className="flex justify-end">
