@@ -201,164 +201,142 @@ const PRESET_CATEGORIES = ["Protest Events", "Institutional Demands", "Instituti
 
 const PUBLIC_PRESET_CATEGORIES = ["Protest", "Conflict", "War"]
 
+// Shared text standardized across all three private-mode presets.
+const PRESET_COUNTRIES_RULE =
+  "**CRITICAL**: Limit the search for content related to Argentina, Chile, and Peru"
+const PRESET_SOURCES_RULE =
+  "**CRITICAL**: Focus on these domains first; https://noalamina.org/, https://olca.cl/oca/index.php, https://www.minesandcommunities.org/, https://www.terram.cl/category/noticias/. After completing the search of these domains open the search to more domains."
+
 const PRESETS = {
   preset1: [
-    // Renamed to environmental_safety for clarity
     {
       id: "1",
-      title: "Methodology",
+      title: "Goal",
       content:
-        "Search for protest events. A protest event is a public political action by a group of people who make demands on authorities such as companies, political actors and the state.",
+        "Search for protest events reported by news agencies, journalists, blogs, news articles and other relevant documents related to this mine.",
     },
     {
       id: "2",
       title: "Countries to Search In",
-      content: "**CRITICAL**: You must only search for content related to Argentina, Chile, and Peru.",
+      content: PRESET_COUNTRIES_RULE,
     },
     {
       id: "3",
-      title: "**CRITICAL** Related Industries",
+      title: "Search Limits (Relevance)",
       content:
-        "Limit the search to protest events against mining companies and mining projects. Do not include oil and gas projects in the search.",
+        "**CRITICAL**: Limit the search to protests against mining companies and mining projects. Do not include oil and gas projects in the search.",
+    },
+    {
+      id: "4",
+      title: "Keywords",
+      content:
+        "Keywords that describe protests include the following: protest (protesta); march / rally (marcha); mobilization (movilización); demonstration / manifestation (manifestación / funa pública); grouping / group (concentración); roadblock (corte de ruta / corte de camino / piquete / bloqueo / bloqueo territorial / interrupción de caminos con camiones); encampment (acampe / campamento); sit-in; occupation of land, buildings, roads (toma / ocupación de predios, edificios, o rutas); caravan (caravana); stoppage (paro); strike (huelga); shutdown (obstrucción); standstill / paralize (paralización); vigil (velatón) / saucepan banging / pot banging (cacerolazo); protest wall / human barricade (cerco simbólico / cerco al proyecto); peaceful resistance / civil resistance (resistencia pacífica / resistencia civil); petition (petitorio); open letter (carta abierta); film presentation (proyección de filme/película, documental, cortometraje); public debate (debate público); public information sesión (sesión de información pública); protest art (intervención artística / escraches); protest sign / poster (pancartas / afiches); muralism (muralismo); public assembly / popular assembly (asamblea abierta / asamblea popular/ autoconvocado); meeting (reunion / encuentro); cultural day (festival / jornada cultural), public statement (pronunciamiento público); news conference (conferencia de prensa / rueda de prensa); press release (comunicado de prensa); denounce / accusation (denuncia pública); community self-defence (autodefensa comunitaria); environmental justice (justicia ambiental); environmental guardian / indigenous guardian (guardia ambiental / guardia indígena); territorial protector / defender (defensa del territorio); environmental defender (defensor ambiental); water defender (defensor del agua); community consultation (consulta comunitaria / consulta popular); local referendum / local plebiscite (referendo local / plebiscito local); community request / community declaration (solicitada comunitaria / declaración comunitaria).",
     },
     {
       id: "5",
-      title: "Whitelisted Sources",
-      content:
-        "First, search for results on these websites. olca.cl, and www.minesandcommunities.org. After, search for results on these websites only after the previous searches do not provide enough results, by using multiple OR statements. The domains are:\nhttps://www.lanacion.com.ar/\nhttps://www.clarin.com/\nhttps://www.larazon.es/\nhttps://www.cronista.com/\nhttps://www.diariouno.com.ar/\nhttps://www.diarioregistrado.com/\nhttps://www.minutouno.com/\nhttp://www.nochepolar.com/\nhttps://www.ambito.com/\nhttps://noticiasargentinas.com/\nhttps://www.perfil.com/\nhttps://www.pagina12.com.ar/\nhttps://www.lacuarta.com/temas/argentina/\nhttps://elsigloweb.com/\nhttps://www.lun.com/\nhttps://www.elancasti.com.ar/\nhttps://www.elesquiu.com/\nhttps://www.diariodecuyo.com.ar/\nhttps://www.tiempodesanjuan.com/\nhttps://www.tiemposur.com.ar/\nhttps://www.eltribuno.com/\nhttps://www.anred.org/\nhttps://palpalainforma.com/\nhttps://www.copenoa.com.ar/\nhttps://latinta.com.ar/\nhttps://elresaltador.com.ar/\nhttps://enredaccion.com.ar/\nhttps://argentina.indymedia.org/\nhttps://periodicas.com.ar/\nhttps://www.tiempoar.com.ar/\nhttps://suresnoticias.com.ar/\nhttps://www.cordobatimes.com/\nhttps://www.ocmal.org/\nhttps://olca.cl/oca/index.php\nhttps://www.minesandcommunities.org/\nhttps://www.redlatinoamericanademujeres.org/\nhttps://www.aomaosam.org.ar/aoma/\nhttps://www.argentina.gob.ar/justicia/institucional\nhttps://www.argentina.gob.ar/capital-humano/trabajo\nhttps://noalamina.org/\nhttps://concienciasolidaria.org.ar/es/\nhttps://asambleasdecomunidades.org.ar/\nhttps://miningpress.com/\nhttps://enernews.com/\nhttps://www.panorama-minero.com\nhttps://huellaminera.com/\nhttps://www.mining.com/\nhttps://www.mining-journal.com/\nhttps://im-mining.com/\nhttps://www.mch.cl/\nhttps://energiminas.com/\nhttps://www.portalminero.com/\nhttps://www.bnamericas.com/",
+      title: "Sources",
+      content: PRESET_SOURCES_RULE,
     },
   ],
   preset2: [
     {
       id: "1",
-      title: "Methodology",
+      title: "Goal",
       content:
-        "Search for demands by individuals and civil society organizations on the courts and regulatory and administrative agencies of the state. This includes submitting legal complaints to the courts or bringing complaints to state regulatory agencies.",
+        "Search for demands by individuals and civil society organizations to the courts and regulatory and administrative agencies of the state. This includes submitting legal complaints to the courts or bringing complaints to state regulatory agencies.",
     },
     {
       id: "2",
       title: "Countries to Search In",
-      content: "**CRITICAL**: You must only search for content related to Argentina, Chile, and Peru.",
+      content: PRESET_COUNTRIES_RULE,
     },
     {
       id: "3",
-      title: "**CRITICAL** Related Industries",
+      title: "Search Limits (Relevance)",
       content:
-        "Limit the search to demands or complaints against mining companies and mining projects. Do not include oil and gas projects in the search.",
+        "**CRITICAL**: Limit the search to demands or complaints against mining companies and mining projects. Do not include oil and gas projects in the search.",
     },
     {
       id: "4",
-      title: "Keywords to Search For",
+      title: "Keywords",
       content:
-        "Keywords describing complaints include: claim / demand / accusation (denuncia); regulatory claim (denuncia ante las autoridades / reclamación ante las autoridades); formal claim (reclamo formal / presentación ante autoridades); queja (complaint); claim of pollution (denuncia de contaminación); claim of spill (denuncia de derrame); environmental crime (delito ambiental).\n\nKeywords describing legal complaints include: violation of rights (violación de derechos); abuse of rights (abuso de derechos); lack of respect for rights (falta de respeto por los derechos); right to prior consultation (derecho a la consulta previa); right to water (derecho al agua); right to a clean environment (derecho a un medio ambiente limpio); protection (amparo); constitutional protection appeal (recurso de amparo); judicial submission (demanda judicial / querella); criminal complaint (denuncia penal); precautionary measure (cautelar / medida cautelar); appeal for unconstitutionality (recurso de inconstitucionalidad); appeal (recurso de apelación / revisión / casación); class action (acción colectiva); strategic litigation (litigio estratégico); judicial presentation (presentación judicial); petition (petición); counterclaim (reconvención); legal remedy (recurso); motion for clarification (recurso de aclaración); administrative appeal (recurso de alzada); motion for reconsideration (recurso de reposición); appeal for reconsideration (recurso de súplica); demand (requerimiento); litigation (pleito); question (interpelación).",
+        "Keywords describing formal demands and complaints to the state include: claim / demand / accusation (denuncia); regulatory claim (denuncia ante las autoridades / reclamación ante las autoridades); formal claim (reclamo formal / presentación ante autoridades); queja (complaint); claim of pollution (denuncia de contaminación); claim of spill (denuncia de derrame); environmental crime (delito ambiental); demand for legal protection (amparo); constitutional protection appeal (recurso de amparo); judicial submission (demanda judicial / querella); criminal complaint (denuncia penal); precautionary measure (cautelar / medida cautelar); appeal for unconstitutionality (recurso de inconstitucionalidad); appeal (recurso de apelación / revisión / casación); class action (acción colectiva); strategic litigation (litigio estratégico); judicial presentation (presentación judicial); petition (petición); counterclaim (reconvención); legal remedy (recurso); motion for clarification (recurso de aclaración); administrative appeal (recurso de alzada); motion for reconsideration (recurso de reposición); appeal for reconsideration (recurso de súplica); demand (requerimiento); litigation (pleito); question (interpelación).",
+    },
+    {
+      id: "5",
+      title: "Sources",
+      content: PRESET_SOURCES_RULE,
     },
   ],
   preset3: [
     {
       id: "1",
-      title: "Methodology",
+      title: "Goal",
       content:
         "Search for institutional responses by the courts and regulatory and administrative agencies of the state to complaints by individuals and civil society organizations.",
     },
     {
       id: "2",
       title: "Countries to Search In",
-      content: "**CRITICAL**: You must only search for content related to Argentina, Chile, and Peru.",
+      content: PRESET_COUNTRIES_RULE,
     },
     {
       id: "3",
-      title: "**CRITICAL** Related Industries",
+      title: "Search Limits (Relevance)",
       content:
-        "Limit the search to institutional responses that affect mining companies. Do not include oil and gas projects in the search.",
+        "**CRITICAL**: Limit the search to institutional responses that affect mining companies and mining projects. Do not include oil and gas projects in the search.",
     },
     {
       id: "4",
-      title: "Keywords to Search For",
+      title: "Keywords",
       content:
-        "Keywords describing institutional responses by regulatory agencies include: environmental inspection (inspección ambiental); mitigation (mitigación); pasivo ambiental (environmental liability); plan de contingencia (contingency plan); environmental audit (auditoría ambiental); final disposition (disposición final); monitoring (monitoreo); certificate (acta / resolución); administrative act (acto administrativo); arbitration (arbitraje); public consultation (audiencia pública / consulta pública); workshop (mesa de trabajo); encumbrance / charge (gravamen); fine (multa); restoration (restauración); environmental clean-up (saneamiento ambiental); revocation of environmental licence (revocación de licencia ambiental / revocación de resolución de calificación ambiental); formulation of charges (formulación de cargos); compliance program (programa de cumplimiento); contaminants criteria (contaminantes criterio); environmental monitoring (fiscalización ambiental); temporary measures (medidas providenciales); self-reporting (autodenuncia); noncompliance (incumplimiento); mining protection (amparo minero); environmental certificate (certificación ambiental); environmental management audit (auditoría de gestión ambiental); polluted area (zona saturada).\n\nKeywords describing institutional responses by the courts include: arbitration award (laudo); nullity of proceedings (nulidad de actuaciones); invitation to take legal action (ofrecimiento de acciones); enabling (habilitación); preliminary ruling (prejudicial); prescription (prescripción); breach (quebramiento); breach of sentence (quebramiento de condena); procedural irregularity / breach of procedure (quebramiento de forma); cessation (casación); precautionary measure (medida cautelar); withdrawal (desistimiento); decree (decreto); edict (edicto); ruling (fallo); final ruling / final judgement (firme).",
+        "Keywords describing institutional responses by the courts and regulatory and administrative agencies of the state include: closure (clausura); suspension (suspension); prohibition (prohibición); revocation / revocation of environmental licence (revocación / revocación de calificación ambiental); administrative closure (cierre administrative); cancellation (anulación); confiscation (decomiso); disqualification (inhabilitación); permit rejection (rechazo de permiso); authorization rejected (negativa de autorización); sanction (sanción administrative); fine (multa); qualification (habilitación); penalization (penalización); technical review (revisión técnica); inspection (inspección); arbitration award (laudo); enabling (habilitación); preliminary ruling (prejudicial); prescription (prescripción); breach (quebramiento); procedural irregularity / breach of procedure (quebramiento de forma); cessation (casación); precautionary measure (medida cautelar); withdrawal (desistimiento); decree (decreto); edict (edicto); ruling (fallo); final ruling / final judgement (firme); public hearing (audiencia pública); inspección ambiental (environmental inspection); dialogue table / dialogue process (mesa de diálogo / mesa de negociación / proceso de diálogo); citizen consultation (consulta ciudadana); dispute settlement mechanism (mecanismo de solucíon de controversias); alternative dispute settlement (resolución alternativa de conflictos); formalization of demands (formalización de demandas); environmental audit (auditoría ambiental); environmental impact statement (declaración de impacto ambiental); environmental impact study (estudio de impacto ambiental); final disposition (disposición final); environmental licence (licencia ambiental); breach a norm (quebramiento); environmental qualification resolution (resolución de calificación ambiental); formulation of charges (formulación de cargos); compliance program (programa de cumplimiento); environmental monitoring (fiscalización ambiental); self-reporting (autodenuncia); amparo minero (mining protection); auditoría de gestion ambiental (environmental management audit).",
+    },
+    {
+      id: "5",
+      title: "Sources",
+      content: PRESET_SOURCES_RULE,
     },
   ],
 }
 
+// General Media interface: mirrors the standardized PEA methodology template, but with
+// the criteria text left blank (sentence-starters only) so users fill in their own.
+// Rule headings are kept: Goal / Countries / Search Limits (Relevance) / Keywords / Sources.
+const GENERAL_MEDIA_TEMPLATE: Rule[] = [
+  {
+    id: "1",
+    title: "Goal",
+    content:
+      "Search for ... reported by news agencies, journalists, blogs, news articles and other relevant documents related to this mine.",
+  },
+  {
+    id: "2",
+    title: "Countries to Search In",
+    content: "**CRITICAL**: Limit the search for content related to ...",
+  },
+  {
+    id: "3",
+    title: "Search Limits (Relevance)",
+    content: "**CRITICAL**: Limit the search to ...",
+  },
+  {
+    id: "4",
+    title: "Keywords",
+    content: "Keywords that describe ... include the following: ...",
+  },
+  {
+    id: "5",
+    title: "Sources",
+    content:
+      "**CRITICAL**: Focus on these domains first; ... After completing the search of these domains open the search to more domains.",
+  },
+]
+
 const PUBLIC_PRESETS = {
-  protest: [
-    {
-      id: "1",
-      title: "Methodology",
-      content:
-        "Search for protest events and demonstrations. Focus on public gatherings, marches, strikes, and other forms of collective action where groups express dissent or make demands on authorities.",
-    },
-    {
-      id: "2",
-      title: "Event Types",
-      content:
-        "Include peaceful protests, demonstrations, sit-ins, marches, rallies, strikes, boycotts, and civil disobedience actions. Document the scale, participants, and demands of each event.",
-    },
-    {
-      id: "3",
-      title: "Key Information",
-      content:
-        "Focus on: date and location, number of participants, organizing groups, stated demands or grievances, government or institutional response, and outcomes or resolutions.",
-    },
-    {
-      id: "4",
-      title: "Sources",
-      content:
-        "Prioritize news agencies, social media reports, NGO documentation, and official statements from organizing groups or government authorities.",
-    },
-  ],
-  conflict: [
-    {
-      id: "1",
-      title: "Methodology",
-      content:
-        "Search for conflicts including armed confrontations, territorial disputes, ethnic tensions, and violent clashes between groups, organizations, or nations.",
-    },
-    {
-      id: "2",
-      title: "Conflict Categories",
-      content:
-        "Include interstate conflicts, civil wars, insurgencies, territorial disputes, ethnic or religious conflicts, and resource-based conflicts. Document the parties involved and their motivations.",
-    },
-    {
-      id: "3",
-      title: "Key Information",
-      content:
-        "Focus on: conflict timeline and escalation patterns, parties involved and their objectives, casualties and humanitarian impact, international involvement or mediation efforts, peace negotiations or ceasefires.",
-    },
-    {
-      id: "4",
-      title: "Sources",
-      content:
-        "Prioritize international news agencies, conflict monitoring organizations (ACLED, UCDP), humanitarian organizations, government statements, and verified field reports.",
-    },
-  ],
-  war: [
-    {
-      id: "1",
-      title: "Methodology",
-      content:
-        "Search for military conflicts, warfare, and large-scale armed confrontations between nations or organized military forces. Include both conventional and unconventional warfare.",
-    },
-    {
-      id: "2",
-      title: "Warfare Types",
-      content:
-        "Include conventional warfare, guerrilla warfare, cyber warfare, proxy wars, civil wars with military involvement, and peacekeeping operations. Document military strategies and operations.",
-    },
-    {
-      id: "3",
-      title: "Key Information",
-      content:
-        "Focus on: military operations and battles, troop movements and deployments, weaponry and military technology used, civilian casualties and war crimes, international laws and conventions, post-war reconstruction and peace agreements.",
-    },
-    {
-      id: "4",
-      title: "Sources",
-      content:
-        "Prioritize military reports, international organizations (UN, ICRC), defense ministries, investigative journalism, war correspondents, and verified satellite imagery analysis.",
-    },
-  ],
+  protest: GENERAL_MEDIA_TEMPLATE,
+  conflict: GENERAL_MEDIA_TEMPLATE,
+  war: GENERAL_MEDIA_TEMPLATE,
 }
 
 const COUNTRIES = [
@@ -780,7 +758,7 @@ export default function Home() {
     let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<methodology>\n'
     rules.forEach((rule) => {
       xml += `  <rule id="${rule.id}">\n`
-      xml += `    <description>${rule.description}</description>\n` // Use description if available, otherwise fallback to title
+      xml += `    <description>${rule.description || rule.title}</description>\n` // Use description if available, otherwise fallback to title
       xml += `    <content>${rule.content}</content>\n`
       xml += `  </rule>\n`
     })
